@@ -253,10 +253,35 @@ function Btn({children,onClick,disabled,variant='gold',style:st}){
 }
 function Shell({children}){return React.createElement('div',{style:{minHeight:'100vh',background:'radial-gradient(ellipse at top,#1a3a2c,#0a1810)',display:'flex',flexDirection:'column',fontFamily:'"PingFang SC","Microsoft YaHei",system-ui,sans-serif'}},children);}
 
-// 语言切换按钮：常驻所有画面
-function LangBtn(){
+// ─── 音乐系统 ────────────────────────────────────────────
+const audioRef={current:null};
+function initAudio(){
+  if(audioRef.current)return;
+  const a=new Audio('./alex-piano.mp3');
+  a.loop=true;a.volume=0.5;
+  audioRef.current=a;
+}
+function playBGM(){
+  initAudio();
+  audioRef.current.play().catch(()=>{});
+}
+function pauseBGM(){
+  if(audioRef.current)audioRef.current.pause();
+}
+
+// ─── 顶部控制栏（语言 + 音乐，常驻所有画面） ─────────────
+function TopControls(){
   const lang=useLang();const toggle=useToggleLang();
-  return React.createElement('button',{onClick:toggle,style:{position:'fixed',top:14,right:14,zIndex:9999,background:'rgba(212,175,55,0.18)',border:'1.5px solid rgba(212,175,55,0.55)',borderRadius:999,color:'#d4af37',fontSize:13,fontWeight:700,padding:'6px 16px',cursor:'pointer',backdropFilter:'blur(6px)',boxShadow:'0 2px 8px rgba(0,0,0,0.3)'}},T[lang].lang);
+  const[muted,setMuted]=useState(false);
+  function toggleMute(){
+    initAudio();
+    if(muted){audioRef.current.play().catch(()=>{});setMuted(false);}
+    else{audioRef.current.pause();setMuted(true);}
+  }
+  return React.createElement('div',{style:{position:'fixed',top:14,right:14,zIndex:9999,display:'flex',gap:8}},
+    React.createElement('button',{onClick:toggleMute,style:{background:'rgba(212,175,55,0.18)',border:'1.5px solid rgba(212,175,55,0.55)',borderRadius:999,color:'#d4af37',fontSize:16,fontWeight:700,padding:'5px 12px',cursor:'pointer',backdropFilter:'blur(6px)',boxShadow:'0 2px 8px rgba(0,0,0,0.3)'}},muted?'🔇':'🔊'),
+    React.createElement('button',{onClick:toggle,style:{background:'rgba(212,175,55,0.18)',border:'1.5px solid rgba(212,175,55,0.55)',borderRadius:999,color:'#d4af37',fontSize:13,fontWeight:700,padding:'6px 16px',cursor:'pointer',backdropFilter:'blur(6px)',boxShadow:'0 2px 8px rgba(0,0,0,0.3)'}},T[lang].lang)
+  );
 }
 
 function TopBar({rn}){
@@ -337,7 +362,7 @@ function SetupScreen({onStart,onRules}){
   const uN=(i,v)=>{const a=[...names];a[i]=v;setNames(a);};
   const uB=(i,v)=>{const a=[...bets];a[i]=Math.max(1,parseInt(v)||0);setBets(a);};
   const tAI=(i)=>{if(i===0)return;const a=[...isAI];a[i]=!a[i];setIsAI(a);};
-  return React.createElement(Shell,null,React.createElement(LangBtn,null),
+  return React.createElement(Shell,null,React.createElement(TopControls,null),
     React.createElement('div',{style:{flex:1,padding:'36px 20px',maxWidth:480,margin:'0 auto',width:'100%',boxSizing:'border-box'}},
       React.createElement('div',{style:{textAlign:'center',marginBottom:32}},
         React.createElement('div',{style:{fontSize:44}},'🐂🀄'),
@@ -366,7 +391,7 @@ function SetupScreen({onStart,onRules}){
 // ─── 规则页 ──────────────────────────────────────────────
 function RulesScreen({onBack}){
   const lang=useLang();const t=T[lang];
-  return React.createElement(Shell,null,React.createElement(LangBtn,null),
+  return React.createElement(Shell,null,React.createElement(TopControls,null),
     React.createElement('div',{style:{padding:'18px 16px 10px',display:'flex',alignItems:'center',gap:10,borderBottom:'1px solid rgba(212,175,55,0.2)'}},
       React.createElement('button',{onClick:onBack,style:{background:'none',border:'none',color:'#d4af37',fontSize:20,cursor:'pointer',lineHeight:1}},t.rulesBack),
       React.createElement('div',null,React.createElement('div',{style:{color:'#d4af37',fontSize:12}},'📖'),React.createElement('div',{style:{color:'#fffdf7',fontSize:17,fontWeight:700}},t.rulesTitle))
@@ -383,7 +408,7 @@ function RulesScreen({onBack}){
 // ─── Pass / AI / Human 屏 ────────────────────────────────
 function PassScreen({name,sub,onReveal}){
   const lang=useLang();const t=T[lang];
-  return React.createElement(Shell,null,React.createElement(LangBtn,null),
+  return React.createElement(Shell,null,React.createElement(TopControls,null),
     React.createElement('div',{style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}},
       React.createElement('div',{style:{fontSize:50,marginBottom:12}},'🤚'),
       React.createElement('div',{style:{color:'#9bb5a8',fontSize:12,letterSpacing:3,marginBottom:8,textTransform:'uppercase'}},t.passTo),
@@ -398,7 +423,7 @@ function AIScreen({player,hand,rn,isDealer,pidx,nPlayers,onDone}){
   const lang=useLang();const t=T[lang];
   const[dots,setDots]=useState('');const fired=useRef(false);
   useEffect(()=>{const t1=setInterval(()=>setDots(d=>d.length>=3?'':d+'.'),350);const t2=setTimeout(()=>{if(fired.current)return;fired.current=true;onDone(aiTurn(rn,hand,isDealer,pidx,nPlayers));},900);return()=>{clearInterval(t1);clearTimeout(t2);};},[]);
-  return React.createElement(Shell,null,React.createElement(LangBtn,null),
+  return React.createElement(Shell,null,React.createElement(TopControls,null),
     React.createElement('div',{style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}},
       React.createElement('div',{style:{fontSize:50,marginBottom:12}},'🤖'),
       React.createElement('div',{style:{color:'#fffdf7',fontSize:21,fontWeight:700,marginBottom:6}},`${player.name} ${t.thinking}${dots}`),
@@ -417,7 +442,7 @@ function HumanScreen({player,hand,rn,isDealer,slots,onSlots,onSubmit}){
   const confirmLabel=rn===1?`${t.confirm} ${mode==='bid'?t.confirmBid:mode==='fold'?t.confirmFold:t.pleaseSelect}`:ready?t.confirmPlay:`${slotLabel[slotKey]} ${curCards.length}/${needed}`;
   function handleConfirm(){if(rn===1){if(!SS.bid[0]||!mode)return;onSubmit({cards:[SS.bid[0]],isBid:mode==='bid',isFold:mode==='fold'});}else{if(curCards.length!==needed)return;onSubmit({cards:curCards});}}
   return React.createElement(Shell,null,
-    React.createElement(LangBtn,null),
+    React.createElement(TopControls,null),
     React.createElement(TopBar,{rn}),
     React.createElement('div',{style:{padding:'10px 16px 6px',display:'flex',alignItems:'center',gap:8}},
       React.createElement('span',{style:{color:'#fffdf7',fontSize:16,fontWeight:700}},player.name),
@@ -486,7 +511,7 @@ function ResultScreen({res,players,rn,dealerIdx,onNext,isLast}){
   const dealerCards=res.choices.find(c=>c.pidx===dealerIdx)?.cards||[];
   const dealerHasDouble=(rn===2&&dealerCards[0]?.rank==='A')||(rn===3&&dealerCards[0]?.rank==='2');
 
-  return React.createElement(Shell,null,React.createElement(LangBtn,null),
+  return React.createElement(Shell,null,React.createElement(TopControls,null),
     React.createElement('div',{style:{flex:1,padding:'28px 18px',maxWidth:480,margin:'0 auto',width:'100%',boxSizing:'border-box',overflowY:'auto'}},
       React.createElement('div',{style:{textAlign:'center',marginBottom:18}},
         React.createElement('div',{style:{fontSize:32}},meta.icon),
@@ -561,7 +586,7 @@ function FinalScreen({players,results,onRestart}){
     return null;
   }
   const SLOT_LABEL={bid:t.slotBid,high:t.slotHigh,low:t.slotLow,sk:t.slotSK,niu:t.slotNiu};
-  return React.createElement(Shell,null,React.createElement(LangBtn,null),
+  return React.createElement(Shell,null,React.createElement(TopControls,null),
     React.createElement('div',{style:{flex:1,overflowY:'auto',padding:'28px 14px 40px',maxWidth:500,margin:'0 auto',width:'100%',boxSizing:'border-box'}},
       React.createElement('div',{style:{textAlign:'center',marginBottom:20}},
         React.createElement('div',{style:{fontSize:42}},'🏆'),
@@ -641,7 +666,14 @@ function App(){
   const[players,setPlayers]=useState([]);
   const[game,setGame]=useState(null);
   const toggleLang=()=>setLang(l=>l==='en'?'zh':'en');
-  function startGame(ps){clearPlans();setPlayers(ps);const deck=shuffle(makeDeck());const hands=ps.map((_,i)=>deck.slice(i*11,i*11+11));setGame({hands,rn:1,dealerIdx:null,curIdx:0,uiState:'pass',choices:[],results:[],pSlots:ps.map(()=>emptySlots())});setStage('play');}
+  function startGame(ps){
+    clearPlans();setPlayers(ps);
+    const deck=shuffle(makeDeck());
+    const hands=ps.map((_,i)=>deck.slice(i*11,i*11+11));
+    setGame({hands,rn:1,dealerIdx:null,curIdx:0,uiState:'pass',choices:[],results:[],pSlots:ps.map(()=>emptySlots())});
+    setStage('play');
+    playBGM();
+  }
   return React.createElement(LangCtx.Provider,{value:{lang,toggleLang}},
     stage==='rules'?React.createElement(RulesScreen,{onBack:()=>setStage('setup')}):
     stage==='setup'?React.createElement(SetupScreen,{onStart:startGame,onRules:()=>setStage('rules')}):
