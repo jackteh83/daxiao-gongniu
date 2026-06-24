@@ -255,18 +255,21 @@ function Shell({children}){return React.createElement('div',{style:{minHeight:'1
 
 // ─── 音乐系统 ────────────────────────────────────────────
 const audioRef={current:null};
-function initAudio(){
-  if(audioRef.current)return;
-  const a=new Audio('./alex-piano.mp3');
-  a.loop=true;a.volume=0.5;
-  audioRef.current=a;
+function getAudio(){
+  if(!audioRef.current){
+    audioRef.current=new Audio('./alex-piano.mp3');
+    audioRef.current.loop=true;
+    audioRef.current.volume=0.5;
+  }
+  return audioRef.current;
 }
 function playBGM(){
-  initAudio();
-  audioRef.current.play().catch(()=>{});
+  const a=getAudio();
+  if(a.paused){a.play().catch(e=>console.log('BGM blocked:',e));}
 }
 function pauseBGM(){
-  if(audioRef.current)audioRef.current.pause();
+  const a=getAudio();
+  if(!a.paused)a.pause();
 }
 
 // ─── 顶部控制栏（语言 + 音乐，常驻所有画面） ─────────────
@@ -274,9 +277,8 @@ function TopControls(){
   const lang=useLang();const toggle=useToggleLang();
   const[muted,setMuted]=useState(false);
   function toggleMute(){
-    initAudio();
-    if(muted){audioRef.current.play().catch(()=>{});setMuted(false);}
-    else{audioRef.current.pause();setMuted(true);}
+    if(muted){getAudio().play().catch(()=>{});setMuted(false);}
+    else{getAudio().pause();setMuted(true);}
   }
   return React.createElement('div',{style:{position:'fixed',top:14,right:14,zIndex:9999,display:'flex',gap:8}},
     React.createElement('button',{onClick:toggleMute,style:{background:'rgba(212,175,55,0.18)',border:'1.5px solid rgba(212,175,55,0.55)',borderRadius:999,color:'#d4af37',fontSize:16,fontWeight:700,padding:'5px 12px',cursor:'pointer',backdropFilter:'blur(6px)',boxShadow:'0 2px 8px rgba(0,0,0,0.3)'}},muted?'🔇':'🔊'),
@@ -667,18 +669,27 @@ function App(){
   const[game,setGame]=useState(null);
   const toggleLang=()=>setLang(l=>l==='en'?'zh':'en');
   function startGame(ps){
-    clearPlans();setPlayers(ps);
+    clearPlans();
+    setPlayers(ps);
     const deck=shuffle(makeDeck());
     const hands=ps.map((_,i)=>deck.slice(i*11,i*11+11));
     setGame({hands,rn:1,dealerIdx:null,curIdx:0,uiState:'pass',choices:[],results:[],pSlots:ps.map(()=>emptySlots())});
     setStage('play');
+    // 用户点击后播放音乐
     playBGM();
+  }
+  // 回到首页时暂停音乐
+  function restart(){
+    pauseBGM();
+    audioRef.current=null; // 重置，下次重新加载
+    setStage('setup');
+    setGame(null);
   }
   return React.createElement(LangCtx.Provider,{value:{lang,toggleLang}},
     stage==='rules'?React.createElement(RulesScreen,{onBack:()=>setStage('setup')}):
     stage==='setup'?React.createElement(SetupScreen,{onStart:startGame,onRules:()=>setStage('rules')}):
     stage==='play'&&game?React.createElement(GameFlow,{players,setPlayers,game,setGame,onFinish:()=>setStage('done')}):
-    stage==='done'?React.createElement(FinalScreen,{players,results:game.results,onRestart:()=>{setStage('setup');setGame(null);}}):null
+    stage==='done'?React.createElement(FinalScreen,{players,results:game.results,onRestart:restart}):null
   );
 }
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
