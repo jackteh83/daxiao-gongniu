@@ -419,7 +419,11 @@ function HumanScreen({player,hand,rn,isDealer,slots,onSlots,onSubmit}){
   const confirmDisabled=rn===1?!(SS.bid.length===1&&mode):!ready;
   const confirmLabel=rn===1?`${t.confirm} ${mode==='bid'?t.confirmBid:mode==='fold'?t.confirmFold:t.pleaseSelect}`:ready?t.confirmPlay:`${slotLabel[slotKey]} ${curCards.length}/${needed}`;
   function handleConfirm(){if(rn===1){if(!SS.bid[0]||!mode)return;onSubmit({cards:[SS.bid[0]],isBid:mode==='bid',isFold:mode==='fold'});}else{if(curCards.length!==needed)return;onSubmit({cards:curCards});}}
-  return React.createElement(Shell,null,React.createElement(TopBar,{rn}),React.createElement('div',{style:{padding:'10px 16px 6px',display:'flex',alignItems:'center',gap:8}},React.createElement('span',{style:{color:'#fffdf7',fontSize:16,fontWeight:700}},player.name),isDealer&&React.createElement('span',{style:{color:'#d4af37',fontSize:12}},t.dealer2),rn>=2&&slotKey&&React.createElement('span',{style:{marginLeft:'auto',color:ready?'#6fcf73':'#9bb5a8',fontSize:11}},ready?`✓ ${slotLabel[slotKey]} ${t.slotReady.replace('✓ ','')}`:``)),React.createElement(PlanBoard,{hand,slots:SS,onChange:onSlots,currentRn:rn,mode,setMode,onConfirm:handleConfirm,confirmDisabled,confirmLabel}));
+  return React.createElement(Shell,null,
+    React.createElement(LangBtn,null),
+    React.createElement(TopBar,{rn}),
+    React.createElement('div',{style:{padding:'10px 16px 6px',display:'flex',alignItems:'center',gap:8}},React.createElement('span',{style:{color:'#fffdf7',fontSize:16,fontWeight:700}},player.name),isDealer&&React.createElement('span',{style:{color:'#d4af37',fontSize:12}},t.dealer2),rn>=2&&slotKey&&React.createElement('span',{style:{marginLeft:'auto',color:ready?'#6fcf73':'#9bb5a8',fontSize:11}},ready?`✓ ${slotLabel[slotKey]} ${t.slotReady.replace('✓ ','')}`:``)),
+    React.createElement(PlanBoard,{hand,slots:SS,onChange:onSlots,currentRn:rn,mode,setMode,onConfirm:handleConfirm,confirmDisabled,confirmLabel}));
 }
 
 // ─── 结算逻辑 ────────────────────────────────────────────
@@ -433,7 +437,9 @@ function ResultScreen({res,players,rn,dealerIdx,onNext,isLast}){
   const lang=useLang();const t=T[lang];
   const RMeta={1:{title:t.r1title,icon:'👑'},2:{title:t.r2title,icon:'🔺'},3:{title:t.r3title,icon:'🔻'},4:{title:t.r4title,icon:'🀄'},5:{title:t.r5title,icon:'🐂'}};
   const meta=RMeta[rn];
-  return React.createElement(Shell,null,React.createElement('div',{style:{flex:1,padding:'28px 18px',maxWidth:480,margin:'0 auto',width:'100%',boxSizing:'border-box',overflowY:'auto'}},
+  return React.createElement(Shell,null,
+    React.createElement(LangBtn,null),
+    React.createElement('div',{style:{flex:1,padding:'28px 18px',maxWidth:480,margin:'0 auto',width:'100%',boxSizing:'border-box',overflowY:'auto'}},
     React.createElement('div',{style:{textAlign:'center',marginBottom:18}},React.createElement('div',{style:{fontSize:32}},meta.icon),React.createElement('div',{style:{color:'#d4af37',fontSize:18,fontWeight:700,marginTop:4}},`${meta.title}`)),
     rn===1&&React.createElement('div',{style:{background:'rgba(212,175,55,0.1)',border:'1px solid rgba(212,175,55,0.3)',borderRadius:12,padding:16,marginBottom:16,textAlign:'center'}},
       React.createElement('div',{style:{display:'inline-block',padding:'3px 12px',borderRadius:999,marginBottom:10,background:res.method==='bid'?'rgba(212,175,55,0.15)':'rgba(155,181,168,0.12)',border:`1px solid ${res.method==='bid'?'rgba(212,175,55,0.4)':'rgba(155,181,168,0.3)'}`}},React.createElement('span',{style:{color:res.method==='bid'?'#d4af37':'#9bb5a8',fontSize:12,fontWeight:600}},res.method==='bid'?t.bidResult:t.foldResult)),
@@ -459,7 +465,9 @@ function FinalScreen({players,results,onRestart}){
   const sorted=[...players].sort((a,b)=>b.score-a.score);
   function slotEval(key,SS){const cards=SS[key]||[];if(cards.length<SLOT_MAX[key])return null;if(key==='sk'){const e=evalSK(cards,lang);return{label:e.label,color:e.mult===3?'#f0a500':e.mult===2?'#6fcf73':'#9bb5a8'};}if(key==='niu'){const e=evalNiu(cards,lang);return{label:e.label,color:e.mult>=5?'#e57373':e.mult===3?'#f0a500':e.mult===2?'#6fcf73':'#9bb5a8'};}if(key==='high'){const c=cards[0];return c.rank==='A'?{label:'A·2x',color:'#f0a500'}:{label:`${c.rank}${SUIT_SYM[c.suit]}`,color:'#9bb5a8'};}if(key==='low'){const c=cards[0];return c.rank==='2'?{label:'2·2x',color:'#6fcf73'}:{label:`${c.rank}${SUIT_SYM[c.suit]}`,color:'#9bb5a8'};}if(key==='bid'){const c=cards[0];return{label:`${c.rank}${SUIT_SYM[c.suit]}`,color:'#d4af37'};}return null;}
   const SLOT_LABEL={bid:t.slotBid,high:t.slotHigh,low:t.slotLow,sk:t.slotSK,niu:t.slotNiu};
-  return React.createElement(Shell,null,React.createElement('div',{style:{flex:1,overflowY:'auto',padding:'28px 14px 40px',maxWidth:500,margin:'0 auto',width:'100%',boxSizing:'border-box'}},
+  return React.createElement(Shell,null,
+    React.createElement(LangBtn,null),
+    React.createElement('div',{style:{flex:1,overflowY:'auto',padding:'28px 14px 40px',maxWidth:500,margin:'0 auto',width:'100%',boxSizing:'border-box'}},
     React.createElement('div',{style:{textAlign:'center',marginBottom:20}},React.createElement('div',{style:{fontSize:42}},'🏆'),React.createElement('div',{style:{color:'#d4af37',fontSize:22,fontWeight:700,marginTop:4,fontFamily:'Georgia,serif'}},t.finalTitle),React.createElement('div',{style:{color:'#9bb5a8',fontSize:11,marginTop:3}},t.finalSub)),
     React.createElement('div',{style:{marginBottom:24}},sorted.map((p,i)=>React.createElement('div',{key:p.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 14px',borderRadius:10,marginBottom:7,background:i===0?'linear-gradient(135deg,rgba(212,175,55,0.2),rgba(212,175,55,0.04))':'rgba(255,255,255,0.04)',border:i===0?'1px solid rgba(212,175,55,0.4)':'1px solid rgba(255,255,255,0.07)'}},React.createElement('div',{style:{display:'flex',alignItems:'center',gap:9}},React.createElement('span',{style:{fontSize:17}},i===0?'🥇':i===1?'🥈':i===2?'🥉':'🎴'),React.createElement('span',{style:{color:'#fffdf7',fontSize:15,fontWeight:700}},p.name)),React.createElement('span',{style:{color:p.score>=0?'#6fcf73':'#e57373',fontWeight:800,fontSize:18}},`${p.score>=0?'+':''}${p.score}`)))),
     React.createElement('div',{style:{color:'#d4af37',fontSize:11,letterSpacing:1,marginBottom:10}},`── ${t.planArea} ──`),
@@ -821,4 +829,4 @@ function FinalScreen({players,results,onRestart}){
         React.createElement('div',{style:{padding:'8px 10px 10px',background:'rgba(0,0,0,0.15)',display:'flex',gap:5}},
           SLOT_DEFS.map(def=>{const cards=SS[def.key]||[];const ev=slotEval(def,SS);return React.createElement('div',{key:def.key,style:{flex:def.max,minWidth:0,borderRadius:7,border:'1px solid rgba(255,255,255,0.1)',background:'rgba(255,255,255,0.03)',padding:'4px 2px 4px',boxSizing:'border-box'}},
             React.createElement('div',{style:{display:'flex',alignItems:'center',gap:2,marginBottom:3,paddingLeft:2}},React.createElement('span',{style:{fontSize:8}},def.icon),React.createElement('span',{style:{color:'#9bb5a8',fontSize:7.5,fontWeight:600}},def.label)),
-            React.createElement('div',{style:{display:'flex',gap:1,flexWrap:'nowrap',overflowX:'hidden',minHeight:28}},cards.length>0?cards.map(c=>{const color=SUIT_CLR[c.suit];return React.createElement('div',{key:c.id,style:{flexShrink:1,minWidth:0,display:'flex',flexDirection:'column',alignItems:'center',background:'#fffdf7',borderRadius:3,border:'1px solid #c9c2ab',padding:'1px 2px',boxSizing:'border-box'}},React.createElement('span',{style:{color,fontSize:9,fontWeight:800,fontFamily:'Georgia,serif',lineHeight:1,whiteSpace:'nowrap'}},c.rank),React.createElement(
+            React.createElement('div',{style:{display:'flex',gap:1,flexWrap:'nowrap',overflowX:'hidden',minHeight:28}},cards.length>0?cards.map(c=>{const color=SUIT_CLR[c.suit];return React.createElement('div',{key:c.id,style:{flexShrink:1,minWidth:0,display:'flex',flexDirection:'column',alignItems:'center',background:'#fffdf7',borderRadius:3,border:'1px solid #c9c2ab',padding:'1px 2px',boxSizing:'border-box'}},React.createEle
