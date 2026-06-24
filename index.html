@@ -19,8 +19,9 @@
 const{useState,useEffect,useRef,useContext,createContext}=React;
 
 // ─── 语言系统 ────────────────────────────────────────────
-const LangCtx=createContext('en');
-function useLang(){return useContext(LangCtx);}
+const LangCtx=createContext({lang:'en',toggleLang:()=>{}});
+function useLang(){return useContext(LangCtx).lang;}
+function useToggleLang(){return useContext(LangCtx).toggleLang;}
 const T={
   en:{
     appName:'Bull Battle',appSub:'Banker · High · Low · Sam Kong · Niu Niu',
@@ -264,9 +265,10 @@ function Btn({children,onClick,disabled,variant='gold',style:st}){
 }
 function Shell({children}){return React.createElement('div',{style:{minHeight:'100vh',background:'radial-gradient(ellipse at top,#1a3a2c,#0a1810)',display:'flex',flexDirection:'column',fontFamily:'"PingFang SC","Microsoft YaHei",system-ui,sans-serif'}},children);}
 
-// ─── 语言切换按钮 ─────────────────────────────────────────
-function LangBtn({lang,onToggle}){
-  return React.createElement('button',{onClick:onToggle,style:{position:'fixed',top:14,right:14,zIndex:999,background:'rgba(212,175,55,0.15)',border:'1.5px solid rgba(212,175,55,0.5)',borderRadius:999,color:'#d4af37',fontSize:13,fontWeight:700,padding:'6px 14px',cursor:'pointer',backdropFilter:'blur(4px)'}},T[lang].lang);
+// ─── 语言切换按钮（常驻所有画面） ────────────────────────
+function LangBtn(){
+  const lang=useLang();const toggle=useToggleLang();
+  return React.createElement('button',{onClick:toggle,style:{position:'fixed',top:14,right:14,zIndex:999,background:'rgba(212,175,55,0.15)',border:'1.5px solid rgba(212,175,55,0.5)',borderRadius:999,color:'#d4af37',fontSize:13,fontWeight:700,padding:'6px 14px',cursor:'pointer',backdropFilter:'blur(4px)'}},T[lang].lang);
 }
 
 function TopBar({rn}){
@@ -338,8 +340,8 @@ function PlanBoard({hand,slots,onChange,currentRn,mode,setMode,onConfirm,confirm
 }
 
 // ─── 设置页 ──────────────────────────────────────────────
-function SetupScreen({onStart,onRules,lang,onToggleLang}){
-  const t=T[lang];
+function SetupScreen({onStart,onRules}){
+  const lang=useLang();const t=T[lang];
   const[n,setN]=useState(4);
   const[names,setNames]=useState(['Player 1','AI Player 2','AI Player 3','AI Player 4']);
   const[bets,setBets]=useState([10,10,10,10]);
@@ -348,7 +350,7 @@ function SetupScreen({onStart,onRules,lang,onToggleLang}){
   const uB=(i,v)=>{const a=[...bets];a[i]=Math.max(1,parseInt(v)||0);setBets(a);};
   const tAI=(i)=>{if(i===0)return;const a=[...isAI];a[i]=!a[i];setIsAI(a);};
   return React.createElement(Shell,null,
-    React.createElement(LangBtn,{lang,onToggle:onToggleLang}),
+    React.createElement(LangBtn,null),
     React.createElement('div',{style:{flex:1,padding:'36px 20px',maxWidth:480,margin:'0 auto',width:'100%',boxSizing:'border-box'}},
       React.createElement('div',{style:{textAlign:'center',marginBottom:32}},
         React.createElement('div',{style:{fontSize:44}},'🐂🀄'),
@@ -375,10 +377,10 @@ function SetupScreen({onStart,onRules,lang,onToggleLang}){
 }
 
 // ─── 规则页 ──────────────────────────────────────────────
-function RulesScreen({onBack,lang,onToggleLang}){
-  const t=T[lang];
+function RulesScreen({onBack}){
+  const lang=useLang();const t=T[lang];
   return React.createElement(Shell,null,
-    React.createElement(LangBtn,{lang,onToggle:onToggleLang}),
+    React.createElement(LangBtn,null),
     React.createElement('div',{style:{padding:'18px 16px 10px',display:'flex',alignItems:'center',gap:10,borderBottom:'1px solid rgba(212,175,55,0.2)'}},
       React.createElement('button',{onClick:onBack,style:{background:'none',border:'none',color:'#d4af37',fontSize:20,cursor:'pointer',lineHeight:1}},t.rulesBack),
       React.createElement('div',null,React.createElement('div',{style:{color:'#d4af37',fontSize:12}},'📖'),React.createElement('div',{style:{color:'#fffdf7',fontSize:17,fontWeight:700}},t.rulesTitle))
@@ -395,13 +397,17 @@ function RulesScreen({onBack,lang,onToggleLang}){
 // ─── 其他屏幕 ────────────────────────────────────────────
 function PassScreen({name,sub,onReveal}){
   const lang=useLang();const t=T[lang];
-  return React.createElement(Shell,null,React.createElement('div',{style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}},React.createElement('div',{style:{fontSize:50,marginBottom:12}},'🤚'),React.createElement('div',{style:{color:'#9bb5a8',fontSize:12,letterSpacing:3,marginBottom:8,textTransform:'uppercase'}},t.passTo),React.createElement('div',{style:{color:'#fffdf7',fontSize:32,fontWeight:700,marginBottom:12,fontFamily:'Georgia,serif'}},name),sub&&React.createElement('div',{style:{color:'#c9bfa0',fontSize:13,marginBottom:32,textAlign:'center',maxWidth:260,lineHeight:1.6}},sub),React.createElement(Btn,{onClick:onReveal},`${t.iam} ${name}，${t.view}`)));}
+  return React.createElement(Shell,null,
+    React.createElement(LangBtn,null),
+    React.createElement('div',{style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}},React.createElement('div',{style:{fontSize:50,marginBottom:12}},'🤚'),React.createElement('div',{style:{color:'#9bb5a8',fontSize:12,letterSpacing:3,marginBottom:8,textTransform:'uppercase'}},t.passTo),React.createElement('div',{style:{color:'#fffdf7',fontSize:32,fontWeight:700,marginBottom:12,fontFamily:'Georgia,serif'}},name),sub&&React.createElement('div',{style:{color:'#c9bfa0',fontSize:13,marginBottom:32,textAlign:'center',maxWidth:260,lineHeight:1.6}},sub),React.createElement(Btn,{onClick:onReveal},`${t.iam} ${name}，${t.view}`)));}
 
 function AIScreen({player,hand,rn,isDealer,pidx,nPlayers,onDone}){
   const lang=useLang();const t=T[lang];
   const[dots,setDots]=useState('');const fired=useRef(false);
   useEffect(()=>{const t1=setInterval(()=>setDots(d=>d.length>=3?'':d+'.'),350);const t2=setTimeout(()=>{if(fired.current)return;fired.current=true;onDone(aiTurn(rn,hand,isDealer,pidx,nPlayers));},900);return()=>{clearInterval(t1);clearTimeout(t2);};},[]);
-  return React.createElement(Shell,null,React.createElement('div',{style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}},React.createElement('div',{style:{fontSize:50,marginBottom:12}},'🤖'),React.createElement('div',{style:{color:'#fffdf7',fontSize:21,fontWeight:700,marginBottom:6}},`${player.name} ${t.thinking}${dots}`),React.createElement('div',{style:{color:'#9bb5a8',fontSize:13}},t.aiDeciding)));
+  return React.createElement(Shell,null,
+    React.createElement(LangBtn,null),
+    React.createElement('div',{style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}},React.createElement('div',{style:{fontSize:50,marginBottom:12}},'🤖'),React.createElement('div',{style:{color:'#fffdf7',fontSize:21,fontWeight:700,marginBottom:6}},`${player.name} ${t.thinking}${dots}`),React.createElement('div',{style:{color:'#9bb5a8',fontSize:13}},t.aiDeciding)));
 }
 
 function HumanScreen({player,hand,rn,isDealer,slots,onSlots,onSubmit}){
@@ -501,9 +507,9 @@ function App(){
   const[game,setGame]=useState(null);
   const toggleLang=()=>setLang(l=>l==='en'?'zh':'en');
   function startGame(ps){clearPlans();setPlayers(ps);const deck=shuffle(makeDeck());const hands=ps.map((_,i)=>deck.slice(i*11,i*11+11));setGame({hands,rn:1,dealerIdx:null,curIdx:0,uiState:'pass',choices:[],results:[],pSlots:ps.map(()=>emptySlots())});setStage('play');}
-  return React.createElement(LangCtx.Provider,{value:lang},
-    stage==='rules'?React.createElement(RulesScreen,{onBack:()=>setStage('setup'),lang,onToggleLang:toggleLang}):
-    stage==='setup'?React.createElement(SetupScreen,{onStart:startGame,onRules:()=>setStage('rules'),lang,onToggleLang:toggleLang}):
+  return React.createElement(LangCtx.Provider,{value:{lang,toggleLang}},
+    stage==='rules'?React.createElement(RulesScreen,{onBack:()=>setStage('setup')}):
+    stage==='setup'?React.createElement(SetupScreen,{onStart:startGame,onRules:()=>setStage('rules')}):
     stage==='play'&&game?React.createElement(GameFlow,{players,setPlayers,game,setGame,onFinish:()=>setStage('done'),lang}):
     stage==='done'?React.createElement(FinalScreen,{players,results:game.results,onRestart:()=>{setStage('setup');setGame(null);}}):null
   );
@@ -815,4 +821,4 @@ function FinalScreen({players,results,onRestart}){
         React.createElement('div',{style:{padding:'8px 10px 10px',background:'rgba(0,0,0,0.15)',display:'flex',gap:5}},
           SLOT_DEFS.map(def=>{const cards=SS[def.key]||[];const ev=slotEval(def,SS);return React.createElement('div',{key:def.key,style:{flex:def.max,minWidth:0,borderRadius:7,border:'1px solid rgba(255,255,255,0.1)',background:'rgba(255,255,255,0.03)',padding:'4px 2px 4px',boxSizing:'border-box'}},
             React.createElement('div',{style:{display:'flex',alignItems:'center',gap:2,marginBottom:3,paddingLeft:2}},React.createElement('span',{style:{fontSize:8}},def.icon),React.createElement('span',{style:{color:'#9bb5a8',fontSize:7.5,fontWeight:600}},def.label)),
-            React.createElement('div',{style:{display:'flex',gap:1,flexWrap:'nowrap',overflowX:'hidden',minHeight:28}},cards.length>0?cards.map(c=>{const color=SUIT_CLR[c.suit];return React.createElement('div',{key:c.id,style:{flexShrink:1,minWidth:0,display:'flex',flexDirection:'column',alignItems:'center',background:'#fffdf7',borderRadius:3,border:'1px solid #c9c2ab',padding:'1px 2px',boxSizing:'border-box'}},React.createElement('span',{style:{color,fontSize:9,fontWeight:800,fontFamily:'Georgia,serif',lineHeight:1,whiteSpace:'nowrap'}},c.rank),React.createElement(SuitIcon,{suit:c.suit,size:7,color}));}):React.createElement('div',{style:{width:'100%',height:28,display:'flex',alignItems
+            React.createElement('div',{style:{display:'flex',gap:1,flexWrap:'nowrap',overflowX:'hidden',minHeight:28}},cards.length>0?cards.map(c=>{const color=SUIT_CLR[c.suit];return React.createElement('div',{key:c.id,style:{flexShrink:1,minWidth:0,display:'flex',flexDirection:'column',alignItems:'center',background:'#fffdf7',borderRadius:3,border:'1px solid #c9c2ab',padding:'1px 2px',boxSizing:'border-box'}},React.createElement('span',{style:{color,fontSize:9,fontWeight:800,fontFamily:'Georgia,serif',lineHeight:1,whiteSpace:'nowrap'}},c.rank),React.createElement(
