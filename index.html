@@ -512,13 +512,16 @@ function ResultScreen({res,players,rn,dealerIdx,onNext,isLast}){
             dealerHasDouble&&React.createElement('span',{style:{color:'#f0a500',fontSize:12,fontWeight:700,background:'rgba(240,165,0,0.15)',padding:'2px 8px',borderRadius:999}},'2x')
           ),
           React.createElement('div',{style:{display:'flex',gap:5,flexWrap:'wrap'}},dealerCards.map(c=>React.createElement(Card,{key:c.id,card:c,size:'sm'}))),
-          res.dE&&React.createElement('div',{style:{color:'#d4af37',fontSize:12,marginTop:6,fontWeight:600}},res.dE.label)
+          // 庄家牌型实时重算
+          (()=>{const liveDE=rn===4&&dealerCards.length===3?evalSK(dealerCards,lang):rn===5&&dealerCards.length===5?evalNiu(dealerCards,lang):null;return liveDE&&React.createElement('div',{style:{color:'#d4af37',fontSize:12,marginTop:6,fontWeight:600}},liveDE.label);})()
         ),
         // 闲家行
-        res.details.map(d=>{
+                  res.details.map(d=>{
           const playerCards=res.choices.find(c=>c.pidx===d.pidx)?.cards||[];
           const playerHasDouble=(rn===2&&playerCards[0]?.rank==='A')||(rn===3&&playerCards[0]?.rank==='2');
           const showDouble=(rn===2||rn===3)&&!d.tie&&(playerHasDouble||dealerHasDouble);
+          // 实时用当前语言重算牌型名称
+          const livePlayerE=rn===4&&playerCards.length===3?evalSK(playerCards,lang):rn===5&&playerCards.length===5?evalNiu(playerCards,lang):null;
           return React.createElement('div',{key:d.pidx,style:{background:d.tie?'rgba(255,255,255,0.04)':d.win?'rgba(56,142,60,0.12)':'rgba(192,57,43,0.1)',border:`1px solid ${d.tie?'rgba(255,255,255,0.08)':d.win?'rgba(56,142,60,0.3)':'rgba(192,57,43,0.28)'}`,borderRadius:12,padding:12,marginBottom:8}},
             React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}},
               React.createElement('span',{style:{color:'#fffdf7',fontWeight:700,fontSize:14}},players[d.pidx].name),
@@ -528,7 +531,7 @@ function ResultScreen({res,players,rn,dealerIdx,onNext,isLast}){
               )
             ),
             React.createElement('div',{style:{display:'flex',gap:5,flexWrap:'wrap',marginBottom:4}},playerCards.map(c=>React.createElement(Card,{key:c.id,card:c,size:'sm'}))),
-            d.pE&&React.createElement('div',{style:{color:'#c9bfa0',fontSize:11}},`${d.pE.label}${d.mult>1?` · ${d.mult}x`:''}`)
+            livePlayerE&&React.createElement('div',{style:{color:'#c9bfa0',fontSize:11}},`${livePlayerE.label}${livePlayerE.mult>1?` · ${livePlayerE.mult}x`:''}`)
           );
         })
       ),
