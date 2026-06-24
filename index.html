@@ -16,6 +16,13 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script type="text/babel">
+window.onerror = function(msg,url,line,col,error){
+  document.body.innerHTML =
+    '<pre style="color:red;background:white;padding:20px">' +
+    msg + '\nLine: ' + line +
+    '\nCol: ' + col +
+    '</pre>';
+};
 const{useState,useEffect,useRef,useContext,createContext}=React;
 const LangCtx=createContext({lang:'en',toggleLang:()=>{}});
 function useLang(){return useContext(LangCtx).lang;}
