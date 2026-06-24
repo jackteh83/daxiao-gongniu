@@ -259,30 +259,42 @@ function getAudio(){
   if(!audioRef.current){
     audioRef.current=new Audio('https://jackteh83.github.io/daxiao-gongniu/alex-piano.mp3');
     audioRef.current.loop=true;
-    audioRef.current.volume=0.5;
+    audioRef.current.volume=0.6;
   }
   return audioRef.current;
 }
-function playBGM(){
-  const a=getAudio();
-  if(a.paused){a.play().catch(e=>console.log('BGM blocked:',e));}
-}
-function pauseBGM(){
-  const a=getAudio();
-  if(!a.paused)a.pause();
-}
 
-// ─── 顶部控制栏（语言 + 音乐，常驻所有画面） ─────────────
+// ─── 顶部控制栏 ──────────────────────────────────────────
 function TopControls(){
   const lang=useLang();const toggle=useToggleLang();
-  const[muted,setMuted]=useState(false);
-  function toggleMute(){
-    if(muted){getAudio().play().catch(()=>{});setMuted(false);}
-    else{getAudio().pause();setMuted(true);}
+  const[playing,setPlaying]=useState(false);
+
+  function toggleMusic(){
+    const a=getAudio();
+    if(playing){
+      a.pause();
+      setPlaying(false);
+    } else {
+      a.play().then(()=>{
+        setPlaying(true);
+      }).catch(err=>{
+        console.log('play error:',err);
+        // 尝试重新加载再播
+        a.load();
+        a.play().then(()=>setPlaying(true)).catch(()=>{});
+      });
+    }
   }
+
   return React.createElement('div',{style:{position:'fixed',top:14,right:14,zIndex:9999,display:'flex',gap:8}},
-    React.createElement('button',{onClick:toggleMute,style:{background:'rgba(212,175,55,0.18)',border:'1.5px solid rgba(212,175,55,0.55)',borderRadius:999,color:'#d4af37',fontSize:16,fontWeight:700,padding:'5px 12px',cursor:'pointer',backdropFilter:'blur(6px)',boxShadow:'0 2px 8px rgba(0,0,0,0.3)'}},muted?'🔇':'🔊'),
-    React.createElement('button',{onClick:toggle,style:{background:'rgba(212,175,55,0.18)',border:'1.5px solid rgba(212,175,55,0.55)',borderRadius:999,color:'#d4af37',fontSize:13,fontWeight:700,padding:'6px 16px',cursor:'pointer',backdropFilter:'blur(6px)',boxShadow:'0 2px 8px rgba(0,0,0,0.3)'}},T[lang].lang)
+    React.createElement('button',{
+      onClick:toggleMusic,
+      style:{background:playing?'rgba(212,175,55,0.35)':'rgba(212,175,55,0.18)',border:`1.5px solid ${playing?'#d4af37':'rgba(212,175,55,0.55)'}`,borderRadius:999,color:'#d4af37',fontSize:16,fontWeight:700,padding:'5px 12px',cursor:'pointer',backdropFilter:'blur(6px)',boxShadow:'0 2px 8px rgba(0,0,0,0.3)'}
+    },playing?'🔊':'🔇'),
+    React.createElement('button',{
+      onClick:toggle,
+      style:{background:'rgba(212,175,55,0.18)',border:'1.5px solid rgba(212,175,55,0.55)',borderRadius:999,color:'#d4af37',fontSize:13,fontWeight:700,padding:'6px 16px',cursor:'pointer',backdropFilter:'blur(6px)',boxShadow:'0 2px 8px rgba(0,0,0,0.3)'}
+    },T[lang].lang)
   );
 }
 
@@ -675,15 +687,10 @@ function App(){
     const hands=ps.map((_,i)=>deck.slice(i*11,i*11+11));
     setGame({hands,rn:1,dealerIdx:null,curIdx:0,uiState:'pass',choices:[],results:[],pSlots:ps.map(()=>emptySlots())});
     setStage('play');
-    // 用户点击后播放音乐
-    playBGM();
   }
-  // 回到首页时暂停音乐
   function restart(){
-    pauseBGM();
-    audioRef.current=null; // 重置，下次重新加载
-    setStage('setup');
-    setGame(null);
+    if(audioRef.current){audioRef.current.pause();audioRef.current=null;}
+    setStage('setup');setGame(null);
   }
   return React.createElement(LangCtx.Provider,{value:{lang,toggleLang}},
     stage==='rules'?React.createElement(RulesScreen,{onBack:()=>setStage('setup')}):
