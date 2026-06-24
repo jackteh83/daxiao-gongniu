@@ -267,7 +267,7 @@ function getAudio(){
 // ─── 顶部控制栏 ──────────────────────────────────────────
 function TopControls(){
   const lang=useLang();const toggle=useToggleLang();
-  const[playing,setPlaying]=useState(false);
+  const[playing,setPlaying]=useState(true);
 
   function toggleMusic(){
     const a=getAudio();
@@ -278,8 +278,6 @@ function TopControls(){
       a.play().then(()=>{
         setPlaying(true);
       }).catch(err=>{
-        console.log('play error:',err);
-        // 尝试重新加载再播
         a.load();
         a.play().then(()=>setPlaying(true)).catch(()=>{});
       });
@@ -687,6 +685,8 @@ function App(){
     const hands=ps.map((_,i)=>deck.slice(i*11,i*11+11));
     setGame({hands,rn:1,dealerIdx:null,curIdx:0,uiState:'pass',choices:[],results:[],pSlots:ps.map(()=>emptySlots())});
     setStage('play');
+    // 利用「开始发牌」这个用户点击事件触发音乐
+    getAudio().play().catch(()=>{});
   }
   function restart(){
     if(audioRef.current){audioRef.current.pause();audioRef.current=null;}
