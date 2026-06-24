@@ -257,7 +257,7 @@ function Shell({children}){return React.createElement('div',{style:{minHeight:'1
 const audioRef={current:null};
 function getAudio(){
   if(!audioRef.current){
-    audioRef.current=new Audio('./alex-piano.mp3');
+    audioRef.current=new Audio('https://jackteh83.github.io/daxiao-gongniu/alex-piano.mp3');
     audioRef.current.loop=true;
     audioRef.current.volume=0.5;
   }
