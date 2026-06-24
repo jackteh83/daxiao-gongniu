@@ -224,28 +224,166 @@ const SLOT_ICON={bid:'👑',high:'🔺',low:'🔻',sk:'🀄',niu:'🐂'};
 function emptySlots(){return{bid:[],high:[],low:[],sk:[],niu:[]};}
 function safeSlots(s){if(!s||typeof s!=='object')return emptySlots();return{bid:Array.isArray(s.bid)?s.bid:[],high:Array.isArray(s.high)?s.high:[],low:Array.isArray(s.low)?s.low:[],sk:Array.isArray(s.sk)?s.sk:[],niu:Array.isArray(s.niu)?s.niu:[]};}
 
-// ─── 扑克牌图形 ──────────────────────────────────────────
-function SuitIcon({suit,size,color}){const P={S:'M12 2C12 2 4 8 4 13.5C4 16.5 6.5 18.5 9 18.2C8.5 19.5 7.5 20.5 6 21H18C16.5 20.5 15.5 19.5 15 18.2C17.5 18.5 20 16.5 20 13.5C20 8 12 2 12 2Z',H:'M12 21C12 21 3 14.5 3 8.5C3 5.5 5.5 3 8.5 3C10 3 11.3 3.8 12 5C12.7 3.8 14 3 15.5 3C18.5 3 21 5.5 21 8.5C21 14.5 12 21 12 21Z',C:'M12 2C9.8 2 8 3.8 8 6C8 6.8 8.2 7.5 8.6 8.1C8.3 8 8 8 7.7 8C5.5 8 3.7 9.8 3.7 12C3.7 14.2 5.5 16 7.7 16C8.5 16 9.2 15.8 9.8 15.4C9.5 16.8 8.7 18.5 7 20H17C15.3 18.5 14.5 16.8 14.2 15.4C14.8 15.8 15.5 16 16.3 16C18.5 16 20.3 14.2 20.3 12C20.3 9.8 18.5 8 16.3 8C16 8 15.7 8 15.4 8.1C15.8 7.5 16 6.8 16 6C16 3.8 14.2 2 12 2Z',D:'M12 2L20 12L12 22L4 12Z'};return React.createElement('svg',{width:size,height:size,viewBox:'0 0 24 24',style:{display:'block'}},React.createElement('path',{d:P[suit],fill:color}));}
-function Court({rank,color,size}){return React.createElement('svg',{width:size,height:size*1.35,viewBox:'0 0 40 54',style:{display:'block'}},React.createElement('rect',{x:1,y:1,width:38,height:52,rx:3,fill:'none',stroke:color,strokeWidth:1,opacity:0.5}),React.createElement('circle',{cx:20,cy:16,r:7,fill:color,opacity:0.85}),rank==='K'&&React.createElement('path',{d:'M11 10L14 4L17 9L20 3L23 9L26 4L29 10Z',fill:color}),rank==='Q'&&React.createElement('path',{d:'M12 9Q20 1 28 9L26 11Q20 6 14 11Z',fill:color}),rank==='J'&&React.createElement('path',{d:'M14 8L20 3L26 8Z',fill:color}),React.createElement('path',{d:'M9 48Q9 28 20 26Q31 28 31 48Z',fill:color,opacity:0.85}));}
-const PIPS={'2':[[.5,.22],[.5,.78]],'3':[[.5,.18],[.5,.5],[.5,.82]],'4':[[.28,.2],[.72,.2],[.28,.8],[.72,.8]],'5':[[.28,.2],[.72,.2],[.5,.5],[.28,.8],[.72,.8]],'6':[[.28,.18],[.72,.18],[.28,.5],[.72,.5],[.28,.82],[.72,.82]],'7':[[.28,.16],[.72,.16],[.5,.35],[.28,.5],[.72,.5],[.28,.84],[.72,.84]],'8':[[.28,.15],[.72,.15],[.5,.32],[.28,.5],[.72,.5],[.5,.68],[.28,.85],[.72,.85]],'9':[[.28,.14],[.72,.14],[.28,.38],[.72,.38],[.5,.5],[.28,.62],[.72,.62],[.28,.86],[.72,.86]],'10':[[.28,.12],[.72,.12],[.5,.26],[.28,.38],[.72,.38],[.28,.62],[.72,.62],[.5,.74],[.28,.88],[.72,.88]]};
-function Card({card,size='md',selected=false,dimmed=false,onClick,draggable=false,onDragStart,onDragEnd}){
-  const SZ={sm:{w:44,h:62,rf:11,ps:6,cs:15,co:20},md:{w:58,h:83,rf:13,ps:8,cs:20,co:28},lg:{w:76,h:108,rf:16,ps:10,cs:26,co:36}};
-  const s=SZ[size]||SZ.md;const rf=card&&card.rank==='10'?s.rf*.8:s.rf;
-  const color=SUIT_CLR[card.suit];const isCourt=['J','Q','K'].includes(card.rank);
-  return React.createElement('div',{onClick,draggable,onDragStart,onDragEnd,style:{width:s.w,height:s.h,borderRadius:7,background:dimmed?'#e8e4d8':'#fffdf7',border:selected?'3px solid #d4af37':'1px solid #c9c2ab',boxShadow:selected?'0 4px 14px rgba(212,175,55,0.5)':'0 2px 5px rgba(0,0,0,0.25)',position:'relative',cursor:draggable?'grab':onClick?'pointer':'default',transform:selected?'translateY(-8px)':'none',transition:'transform 0.15s',opacity:dimmed?0.45:1,flexShrink:0,boxSizing:'border-box',overflow:'hidden',userSelect:'none'}},
-    React.createElement('div',{style:{position:'absolute',top:2,left:3,display:'flex',flexDirection:'column',alignItems:'center',lineHeight:1}},React.createElement('span',{style:{color,fontWeight:800,fontSize:rf,fontFamily:'Georgia,serif',whiteSpace:'nowrap'}},card.rank),React.createElement(SuitIcon,{suit:card.suit,size:rf*.75,color})),
-    React.createElement('div',{style:{position:'absolute',bottom:2,right:3,display:'flex',flexDirection:'column',alignItems:'center',lineHeight:1,transform:'rotate(180deg)'}},React.createElement('span',{style:{color,fontWeight:800,fontSize:rf,fontFamily:'Georgia,serif',whiteSpace:'nowrap'}},card.rank),React.createElement(SuitIcon,{suit:card.suit,size:rf*.75,color})),
-    React.createElement('div',{style:{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center'}},
-      card.rank==='A'&&React.createElement(SuitIcon,{suit:card.suit,size:s.cs,color}),
-      isCourt&&React.createElement(Court,{rank:card.rank,color,size:s.co}),
-      !['A'].includes(card.rank)&&!isCourt&&PIPS[card.rank]&&React.createElement('div',{style:{position:'relative',width:'78%',height:'82%'}},PIPS[card.rank].map(([x,y],i)=>React.createElement('div',{key:i,style:{position:'absolute',left:`${x*100}%`,top:`${y*100}%`,transform:`translate(-50%,-50%) rotate(${y>.55?180:0}deg)`}},React.createElement(SuitIcon,{suit:card.suit,size:s.ps,color}))))
-    )
+// ─── 扑克牌图形（精致版） ────────────────────────────────
+function SuitIcon({suit,size,color}){
+  const P={
+    S:'M12 2C12 2 4 8 4 13.5C4 16.5 6.5 18.5 9 18.2C8.5 19.5 7.5 20.5 6 21H18C16.5 20.5 15.5 19.5 15 18.2C17.5 18.5 20 16.5 20 13.5C20 8 12 2 12 2Z',
+    H:'M12 21C12 21 3 14.5 3 8.5C3 5.5 5.5 3 8.5 3C10 3 11.3 3.8 12 5C12.7 3.8 14 3 15.5 3C18.5 3 21 5.5 21 8.5C21 14.5 12 21 12 21Z',
+    C:'M12 2C9.8 2 8 3.8 8 6C8 6.8 8.2 7.5 8.6 8.1C8.3 8 8 8 7.7 8C5.5 8 3.7 9.8 3.7 12C3.7 14.2 5.5 16 7.7 16C8.5 16 9.2 15.8 9.8 15.4C9.5 16.8 8.7 18.5 7 20H17C15.3 18.5 14.5 16.8 14.2 15.4C14.8 15.8 15.5 16 16.3 16C18.5 16 20.3 14.2 20.3 12C20.3 9.8 18.5 8 16.3 8C16 8 15.7 8 15.4 8.1C15.8 7.5 16 6.8 16 6C16 3.8 14.2 2 12 2Z',
+    D:'M12 2L20 12L12 22L4 12Z'
+  };
+  return React.createElement('svg',{width:size,height:size,viewBox:'0 0 24 24',style:{display:'block',flexShrink:0}},
+    React.createElement('path',{d:P[suit],fill:color}));
+}
+
+// 人头牌 SVG 人像
+function CourtArt({rank,color,w,h}){
+  const crown=React.createElement('g',null,
+    React.createElement('polygon',{points:'4,14 8,6 12,10 16,6 20,14',fill:'#d4af37',stroke:'#b8932c',strokeWidth:0.5}),
+    React.createElement('circle',{cx:4,cy:14,r:1.5,fill:'#d4af37'}),
+    React.createElement('circle',{cx:12,cy:10,r:1.5,fill:'#d4af37'}),
+    React.createElement('circle',{cx:20,cy:14,r:1.5,fill:'#d4af37'})
+  );
+  const face=React.createElement('g',null,
+    React.createElement('ellipse',{cx:12,cy:24,rx:6,ry:7,fill:'#ffe0b2',stroke:color,strokeWidth:0.5}),
+    React.createElement('circle',{cx:10,cy:22,r:1,fill:color,opacity:0.8}),
+    React.createElement('circle',{cx:14,cy:22,r:1,fill:color,opacity:0.8}),
+    React.createElement('path',{d:'M10 26 Q12 28 14 26',stroke:color,strokeWidth:0.8,fill:'none',opacity:0.8})
+  );
+  const body=React.createElement('g',null,
+    React.createElement('rect',{x:5,y:30,width:14,height:16,rx:3,fill:color,opacity:0.9}),
+    React.createElement('rect',{x:8,y:32,width:8,height:3,rx:1,fill:'#d4af37',opacity:0.7}),
+    rank==='K'&&React.createElement('line',{x1:7,y1:38,x2:17,y2:38,stroke:'#d4af37',strokeWidth:1,opacity:0.6}),
+    rank==='Q'&&React.createElement('ellipse',{cx:12,cy:38,rx:4,ry:2,fill:'none',stroke:'#d4af37',strokeWidth:0.8,opacity:0.6}),
+    rank==='J'&&React.createElement('path',{d:'M9 36 L12 40 L15 36',fill:'none',stroke:'#d4af37',strokeWidth:0.8,opacity:0.6})
+  );
+  return React.createElement('svg',{width:w,height:h,viewBox:'0 0 24 48',style:{display:'block'}},
+    React.createElement('rect',{x:1,y:1,width:22,height:46,rx:2,fill:'none',stroke:color,strokeWidth:0.5,opacity:0.3}),
+    crown,face,body
   );
 }
+
+const PIPS={
+  '2':[[.5,.25],[.5,.75]],
+  '3':[[.5,.2],[.5,.5],[.5,.8]],
+  '4':[[.28,.25],[.72,.25],[.28,.75],[.72,.75]],
+  '5':[[.28,.22],[.72,.22],[.5,.5],[.28,.78],[.72,.78]],
+  '6':[[.28,.2],[.72,.2],[.28,.5],[.72,.5],[.28,.8],[.72,.8]],
+  '7':[[.28,.18],[.72,.18],[.5,.35],[.28,.52],[.72,.52],[.28,.8],[.72,.8]],
+  '8':[[.28,.16],[.72,.16],[.5,.31],[.28,.5],[.72,.5],[.5,.69],[.28,.84],[.72,.84]],
+  '9':[[.28,.15],[.72,.15],[.28,.38],[.72,.38],[.5,.5],[.28,.62],[.72,.62],[.28,.85],[.72,.85]],
+  '10':[[.28,.13],[.72,.13],[.5,.27],[.28,.4],[.72,.4],[.28,.6],[.72,.6],[.5,.73],[.28,.87],[.72,.87]],
+};
+
+function Card({card,size='md',selected=false,dimmed=false,onClick,draggable=false,onDragStart,onDragEnd}){
+  const SZ={
+    sm:{w:44,h:64,rf:10,ps:7,border:6},
+    md:{w:62,h:90,rf:13,ps:10,border:8},
+    lg:{w:82,h:116,rf:16,ps:13,border:10}
+  };
+  const s=SZ[size]||SZ.md;
+  const rf=card.rank==='10'?s.rf*.82:s.rf;
+  const color=SUIT_CLR[card.suit];
+  const isRed=color==='#c0392b';
+  const isCourt=['J','Q','K'].includes(card.rank);
+  const isAce=card.rank==='A';
+
+  // 外框渐变色
+  const bgGrad=selected
+    ?'linear-gradient(145deg,#fffef0,#fff9e0)'
+    :'linear-gradient(145deg,#ffffff,#f8f4ee)';
+
+  // 角标
+  const corner=(flip)=>React.createElement('div',{style:{
+    position:'absolute',...(flip?{bottom:3,right:3,transform:'rotate(180deg)'}:{top:3,left:3}),
+    display:'flex',flexDirection:'column',alignItems:'center',gap:0,lineHeight:1
+  }},
+    React.createElement('span',{style:{color,fontWeight:900,fontSize:rf,fontFamily:'Georgia,serif',lineHeight:1,letterSpacing:'-0.5px'}},card.rank),
+    React.createElement(SuitIcon,{suit:card.suit,size:rf*.8,color})
+  );
+
+  // 中央内容
+  let center;
+  if(isAce){
+    center=React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',flex:1}},
+      React.createElement('div',{style:{filter:'drop-shadow(0 2px 3px rgba(0,0,0,0.15))'}},
+        React.createElement(SuitIcon,{suit:card.suit,size:s.w*.55,color})
+      )
+    );
+  } else if(isCourt){
+    center=React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',flex:1,padding:'2px 4px'}},
+      React.createElement('div',{style:{
+        width:'100%',height:'100%',borderRadius:4,
+        background:isRed?'linear-gradient(135deg,#fff5f5,#ffe8e8)':'linear-gradient(135deg,#f0f4ff,#e8eeff)',
+        border:`1px solid ${color}22`,
+        display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2,
+        padding:4,
+      }},
+        // 装饰边框
+        React.createElement('div',{style:{position:'absolute',inset:6,border:`1px solid ${color}18`,borderRadius:3,pointerEvents:'none'}}),
+        React.createElement(CourtArt,{rank:card.rank,color,w:s.w-16,h:s.h-28}),
+        React.createElement('span',{style:{color,fontSize:rf*.75,fontWeight:800,fontFamily:'Georgia,serif',letterSpacing:1,marginTop:1}},
+          card.rank==='J'?'JACK':card.rank==='Q'?'QUEEN':'KING'
+        )
+      )
+    );
+  } else {
+    // 数字牌：pip 排列
+    const pips=PIPS[card.rank]||[];
+    center=React.createElement('div',{style:{position:'relative',flex:1,width:'100%'}},
+      pips.map(([x,y],i)=>React.createElement('div',{key:i,style:{
+        position:'absolute',
+        left:`${x*100}%`,top:`${y*100}%`,
+        transform:`translate(-50%,-50%) rotate(${y>0.55?180:0}deg)`,
+      }},React.createElement(SuitIcon,{suit:card.suit,size:s.ps,color})))
+    );
+  }
+
+  return React.createElement('div',{
+    onClick,draggable,onDragStart,onDragEnd,
+    style:{
+      width:s.w,height:s.h,borderRadius:s.border,
+      background:dimmed?'#e0ddd8':bgGrad,
+      border:selected?`2.5px solid #d4af37`:`1.5px solid #ccc5b5`,
+      boxShadow:selected
+        ?'0 6px 18px rgba(212,175,55,0.5),0 2px 6px rgba(0,0,0,0.2)'
+        :'0 2px 6px rgba(0,0,0,0.18),0 1px 3px rgba(0,0,0,0.12)',
+      position:'relative',
+      cursor:draggable?'grab':onClick?'pointer':'default',
+      transform:selected?'translateY(-10px)':'none',
+      transition:'transform 0.15s,box-shadow 0.15s',
+      opacity:dimmed?0.5:1,
+      flexShrink:0,boxSizing:'border-box',
+      overflow:'hidden',userSelect:'none',
+      display:'flex',flexDirection:'column',
+    }
+  },
+    corner(false),
+    center,
+    corner(true)
+  );
+}
+
 function MiniCard({card,selected=false,onClick,draggable=false,onDragStart,onDragEnd}){
   const color=SUIT_CLR[card.suit];
-  return React.createElement('div',{onClick,draggable,onDragStart,onDragEnd,style:{display:'inline-flex',flexDirection:'column',alignItems:'center',justifyContent:'center',width:28,height:38,borderRadius:4,flexShrink:0,background:selected?'#fff9e6':'#fffdf7',border:selected?'2px solid #d4af37':'1px solid #c9c2ab',boxShadow:selected?'0 2px 8px rgba(212,175,55,0.5)':'0 1px 3px rgba(0,0,0,0.25)',transform:selected?'translateY(-4px)':'none',transition:'transform .15s',cursor:onClick?'pointer':'default',userSelect:'none',boxSizing:'border-box'}},
-    React.createElement('span',{style:{color,fontSize:10,fontWeight:800,fontFamily:'Georgia,serif',lineHeight:1}},card.rank),React.createElement(SuitIcon,{suit:card.suit,size:8,color}));
+  const isRed=color==='#c0392b';
+  return React.createElement('div',{
+    onClick,draggable,onDragStart,onDragEnd,
+    style:{
+      display:'inline-flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
+      width:30,height:42,borderRadius:5,flexShrink:0,
+      background:selected?'#fffbe6':'linear-gradient(145deg,#ffffff,#f8f4ee)',
+      border:selected?'2px solid #d4af37':'1.5px solid #ccc5b5',
+      boxShadow:selected?'0 3px 10px rgba(212,175,55,0.5)':'0 1px 4px rgba(0,0,0,0.2)',
+      transform:selected?'translateY(-5px)':'none',
+      transition:'transform .15s',
+      cursor:onClick?'pointer':'default',
+      userSelect:'none',boxSizing:'border-box',gap:1,
+    }
+  },
+    React.createElement('span',{style:{color,fontSize:11,fontWeight:900,fontFamily:'Georgia,serif',lineHeight:1}},card.rank),
+    React.createElement(SuitIcon,{suit:card.suit,size:9,color})
+  );
 }
 function Btn({children,onClick,disabled,variant='gold',style:st}){
   const V={gold:{background:'linear-gradient(135deg,#d4af37,#b8932c)',color:'#1a1a0a',border:'none',boxShadow:'0 4px 16px rgba(212,175,55,0.3)'},ghost:{background:'transparent',color:'#d4af37',border:'1.5px solid #d4af37'},muted:{background:'transparent',color:'#9bb5a8',border:'1.5px solid rgba(155,181,168,0.4)'}};
