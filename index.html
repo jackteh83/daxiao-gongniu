@@ -75,7 +75,7 @@ const T={
     niuBaobaoAMax:'Twin Aces (Max)',niuBaobaoAMin:'Twin Aces (Min)',
     niuBaobao:'Twin',niu10:'Bull Ten (2x)',niuN:'Bull',noNiu:'No Bull',
     pkRoyal:'Royal Flush',pkStraightFlush:'Straight Flush',pkFourKind:'Four of a Kind',pkFullHouse:'Full House',pkFlush:'Flush',pkStraight:'Straight',pkThreeKind:'Three of a Kind',pkTwoPair:'Two Pair',pkOnePair:'Pair',pkHighCard:'High Card',
-    modeNiu:'🐂 Bull',modePoker:'🃏 Poker',modeLabel:'Game Mode',r5titlePk:'Round 5 · Poker',r5descPk:'Play last 5 cards. Best poker hand wins.',slotPoker:'Poker',appNamePk:'Bull & Poker',
+    modeNiu:'🐂 Bull',modePoker:'🃏 Poker',modeLabel:'Game Mode',r5titlePk:'Round 5 · Poker',r5descPk:'Play last 5 cards. Best poker hand wins.',slotPoker:'Poker',appNamePk:'Poker',
     triple:'Triple',tenPt:'Ten Points (2x)',pt:'Points',
     rulesSecs:[
       {icon:'👑',title:'Round 1 · Banker',lines:['Each player plays one card to bid or fold.','Highest bid card wins the Banker role.','If no one bids, lowest fold card becomes Banker.','Banker settles with all players independently.']},
@@ -87,11 +87,11 @@ const T={
     ],
     rules5Pk:[
       {icon:'🃏',title:'Round 5 · Poker',lines:['Play your last 5 cards as a standard poker hand.','Highest hand type wins; the winner is paid by their hand\'s multiplier.','Same type → compare key cards then kickers in detail. Identical = draw.']},
-      {icon:'🏆',title:'Hand Ranking & Multipliers',lines:['Royal Flush (10 J Q K A, same suit) — 10x','Straight Flush (5 in a row, same suit) — 5x','Four of a Kind — 4x','Full House (three + pair) — 3x','Flush (5 same suit) — 2x','Straight (5 in a row) — 2x','Three of a Kind — 1x','Two Pair — 1x','One Pair — 1x','High Card — 1x','Note: A can be high (10JQKA) or low (A2345). No 3/6 swap in Poker mode.']},
+      {icon:'🏆',title:'Hand Ranking & Multipliers',lines:['Royal Flush (10 J Q K A, same suit) — 10x','Straight Flush (5 in a row, same suit) — 5x','Four of a Kind — 4x','Full House (three + pair) — 3x','Flush (5 same suit) — 2x','Straight (5 in a row) — 2x','Three of a Kind — 1x','Two Pair — 1x','One Pair — 1x','High Card — 1x','Note: A can be high (10 J Q K A) or low (A 2 3 4 5).']},
     ],
   },
   zh:{
-    appName:'大小公牛',appSub:'抢庄 · 斗大 · 斗小 · 三公 · 斗牛',appSubPk:'抢庄 · 斗大 · 斗小 · 三公 · 斗扑',
+    appName:'大小公牛',appSub:'抢庄 · 斗大 · 斗小 · 三公 · 斗牛',appSubPk:'抢庄 · 斗大 · 斗小 · 三公 · 扑克',
     rules:'📖 规则说明',players:'玩家人数',playerSetup:'玩家设置',
     human:'🧑 真人',ai:'🤖 AI',you:'🧑 真人玩家（你）',
     bet:'注',startGame:'开始发牌 🎴',
@@ -127,7 +127,7 @@ const T={
     niuBaobaoAMax:'牛宝宝A（最大）',niuBaobaoAMin:'牛宝宝1（最小）',
     niuBaobao:'牛宝宝',niu10:'牛10（双倍）',niuN:'牛',noNiu:'没牛',
     pkRoyal:'皇家同花顺',pkStraightFlush:'同花顺',pkFourKind:'四条',pkFullHouse:'葫芦',pkFlush:'同花',pkStraight:'顺子',pkThreeKind:'三条',pkTwoPair:'两对',pkOnePair:'一对',pkHighCard:'高牌',
-    modeNiu:'🐂 大小公牛',modePoker:'🃏 大小公扑',modeLabel:'游戏模式',r5titlePk:'第五回合 · 斗扑',r5descPk:'出最后五张牌，比扑克牌型',slotPoker:'斗扑',appNamePk:'大小公扑',
+    modeNiu:'🐂 大小公牛',modePoker:'🃏 扑克',modeLabel:'游戏模式',r5titlePk:'第五回合 · 扑克',r5descPk:'出最后五张牌，比扑克牌型',slotPoker:'扑克',appNamePk:'扑克',
     triple:'豹子',tenPt:'10点（双倍）',pt:'点',
     rulesSecs:[
       {icon:'👑',title:'第一回合 · 抢庄',lines:['每人出一张牌，可选择「抢庄」或「弃牌」。','抢庄者：牌面最大者当庄。','若无人抢庄：弃牌中最小者强制当庄。','庄家与所有闲家独立结算。']},
@@ -139,7 +139,7 @@ const T={
     ],
     rules5Pk:[
       {icon:'🃏',title:'第五回合 · 斗扑',lines:['用最后五张牌组成标准扑克牌型比大小。','牌型大者赢，赢家按自己牌型的倍数 × 底注结算。','牌型相同则细比关键牌与踢脚牌；完全相同为和局。']},
-      {icon:'🏆',title:'牌型大小与倍数',lines:['皇家同花顺（同花10 J Q K A）— 10倍','同花顺（同花五连）— 5倍','四条（铁支，四张同点）— 4倍','葫芦（三条+一对）— 3倍','同花（五张同花色）— 2倍','顺子（五张连续）— 2倍','三条 — 1倍','两对 — 1倍','一对 — 1倍','高牌 — 1倍','说明：A 可作最大（10JQKA）或最小（A2345）。斗扑模式无「3/6互换」规则。']},
+      {icon:'🏆',title:'牌型大小与倍数',lines:['皇家同花顺（同花10 J Q K A）— 10倍','同花顺（同花五连）— 5倍','四条（铁支，四张同点）— 4倍','葫芦（三条+一对）— 3倍','同花（五张同花色）— 2倍','顺子（五张连续）— 2倍','三条 — 1倍','两对 — 1倍','一对 — 1倍','高牌 — 1倍','说明：A 可作最大（10 J Q K A）或最小（A 2 3 4 5）。']},
     ],
   },
 };
