@@ -18,6 +18,18 @@
   <script type="text/babel">
 const{useState,useEffect,useRef,useContext,createContext}=React;
 
+// 隐蔽长按组件：按住约 1.2 秒触发 onHold，期间该文字无任何视觉变化（旁人无从察觉）
+function HoldText({children,onHold,ms=1200,style}){
+  const timer=useRef(null);const fired=useRef(false);
+  const start=()=>{fired.current=false;clearTimeout(timer.current);timer.current=setTimeout(()=>{fired.current=true;onHold&&onHold();},ms);};
+  const cancel=()=>{clearTimeout(timer.current);};
+  return React.createElement('span',{
+    style:{...style,WebkitUserSelect:'none',userSelect:'none',WebkitTouchCallout:'none',touchAction:'manipulation'},
+    onPointerDown:start,onPointerUp:cancel,onPointerLeave:cancel,onPointerCancel:cancel,
+    onContextMenu:e=>e.preventDefault()
+  },children);
+}
+
 // ─── 语言系统 ────────────────────────────────────────────
 const LangCtx=createContext({lang:'en',toggleLang:()=>{}});
 function useLang(){return useContext(LangCtx).lang;}
@@ -32,6 +44,7 @@ const T={
     fairCommit:'Server Seed Hash (commitment)',fairServerSeed:'Server Seed (revealed)',fairClientSeed:'Client Seed',fairNonce:'Nonce',
     fairVerifyTitle:'Fairness Verification',fairVerifyHint:'Before the deal, the server seed hash was committed. After the game, verify: SHA-256(server seed) must equal the committed hash, and re-shuffling with these seeds reproduces the exact same deck.',
     fairCopy:'Copy',fairCopied:'Copied ✓',
+    fairModalTitle:'🛡️ Provably Fair',fairClose:'Close',fairNoData:'No game played yet. The seed for the next deal can be set below.',fairNextSeed:'Client Seed for Next Game',fairSeedSaved:'Saved ✓',fairSave:'Save',fairLastGame:'Last Game Verification',
     r1title:'Round 1 · Banker',r1desc:'Play a card to bid for Banker, or fold. Lowest fold becomes Banker if no one bids.',
     r2title:'Round 2 · High Card',r2desc:'Play one card. Highest wins. A wins = double points.',
     r3title:'Round 3 · Low Card',r3desc:'Play one card. Lowest wins. 2 wins = double points.',
@@ -76,6 +89,7 @@ const T={
     fairCommit:'服务端种子哈希（承诺值）',fairServerSeed:'服务端种子（已揭示）',fairClientSeed:'客户端种子',fairNonce:'局号',
     fairVerifyTitle:'公平性验证',fairVerifyHint:'发牌前已先公布服务端种子的哈希承诺。游戏结束后可验证：对服务端种子做 SHA-256 应等于当初的承诺值；用这些种子重新洗牌，会得到完全相同的牌序。',
     fairCopy:'复制',fairCopied:'已复制 ✓',
+    fairModalTitle:'🛡️ 可证明公平',fairClose:'关闭',fairNoData:'还没玩过对局。可在下方设置下一局的客户端种子。',fairNextSeed:'下一局客户端种子',fairSeedSaved:'已保存 ✓',fairSave:'保存',fairLastGame:'最近一局验证信息',
     r1title:'第一回合 · 抢庄',r1desc:'想抢庄就选一张牌；不想抢就弃一张牌。若无人抢庄，弃牌最小者强制当庄',
     r2title:'第二回合 · 斗大',r2desc:'出一张牌，越大越赢。拿 A 获胜得双倍分',
     r3title:'第三回合 · 斗小',r3desc:'出一张牌，越小越赢。拿 2 获胜得双倍分',
@@ -562,13 +576,12 @@ function PlanBoard({hand,slots,onChange,currentRn,mode,setMode,onConfirm,confirm
 }
 
 // ─── 设置页 ──────────────────────────────────────────────
-function SetupScreen({onStart,onRules}){
+function SetupScreen({onStart,onRules,onShowFair}){
   const lang=useLang();const t=T[lang];
   const[n,setN]=useState(4);
   const[names,setNames]=useState(['Player 1','AI Player 2','AI Player 3','AI Player 4']);
   const[bets,setBets]=useState([10,10,10,10]);
   const[isAI,setIsAI]=useState([false,true,true,true]);
-  const[clientSeed,setClientSeed]=useState('');
   const uN=(i,v)=>{const a=[...names];a[i]=v;setNames(a);};
   const uB=(i,v)=>{const a=[...bets];a[i]=Math.max(1,parseInt(v)||0);setBets(a);};
   const tAI=(i)=>{if(i===0)return;const a=[...isAI];a[i]=!a[i];setIsAI(a);};
@@ -576,7 +589,13 @@ function SetupScreen({onStart,onRules}){
     React.createElement('div',{style:{flex:1,padding:'36px 20px',maxWidth:480,margin:'0 auto',width:'100%',boxSizing:'border-box'}},
       React.createElement('div',{style:{textAlign:'center',marginBottom:32}},
         React.createElement('div',{style:{fontSize:44}},'🐂🀄'),
-        React.createElement('div',{style:{color:'#fffdf7',fontSize:26,fontWeight:700,marginTop:8,fontFamily:'Georgia,serif'}},t.appName),
+        React.createElement('div',{style:{color:'#fffdf7',fontSize:26,fontWeight:700,marginTop:8,fontFamily:'Georgia,serif'}},
+          (()=>{const txt=t.appName;const idx=txt.indexOf('公')>=0?txt.indexOf('公'):Math.min(2,txt.length-1);
+            return Array.from(txt).map((ch,i)=>i===idx
+              ?React.createElement(HoldText,{key:i,onHold:onShowFair},ch)
+              :React.createElement('span',{key:i},ch));
+          })()
+        ),
         React.createElement('div',{style:{color:'#9bb5a8',fontSize:13,marginTop:4}},t.appSub),
         React.createElement('button',{onClick:onRules,style:{marginTop:10,background:'none',border:'1px solid rgba(212,175,55,0.35)',borderRadius:999,color:'#d4af37',fontSize:12,padding:'5px 16px',cursor:'pointer'}},t.rules)
       ),
@@ -593,15 +612,7 @@ function SetupScreen({onStart,onRules}){
           React.createElement('button',{onClick:()=>tAI(i),style:{flex:1,padding:'7px 0',borderRadius:7,fontSize:12,fontWeight:600,border:isAI[i]?'1.5px solid #d4af37':'1px solid rgba(255,255,255,0.12)',background:isAI[i]?'rgba(212,175,55,0.15)':'transparent',color:isAI[i]?'#d4af37':'#9bb5a8',cursor:'pointer'}},t.ai)
         )
       )),
-      React.createElement('div',{style:{marginTop:18,padding:'10px 12px',borderRadius:12,background:'rgba(155,181,168,0.06)',border:'1px solid rgba(155,181,168,0.18)'}},
-        React.createElement('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:7}},
-          React.createElement('span',{style:{fontSize:12}},'🛡️'),
-          React.createElement('span',{style:{color:'#cfe3d8',fontSize:12,fontWeight:700}},t.fairTitle)
-        ),
-        React.createElement('div',{style:{color:'#9bb5a8',fontSize:10,marginBottom:6}},t.clientSeedLabel),
-        React.createElement('input',{value:clientSeed,onChange:e=>setClientSeed(e.target.value),placeholder:t.clientSeedPlaceholder,style:{width:'100%',boxSizing:'border-box',padding:'9px 11px',borderRadius:8,border:'1px solid rgba(155,181,168,0.3)',background:'rgba(0,0,0,0.2)',color:'#fffdf7',fontSize:12,outline:'none',fontFamily:'monospace'}})
-      ),
-      React.createElement('div',{style:{marginTop:24,textAlign:'center'}},React.createElement(Btn,{onClick:()=>{window.__bbClientSeed=clientSeed;onStart(range(n).map(i=>({id:i,name:(names[i]||`Player ${i+1}`).trim(),bet:bets[i]||10,score:0,isAI:i===0?false:!!isAI[i]})));}},t.startGame))
+      React.createElement('div',{style:{marginTop:24,textAlign:'center'}},React.createElement(Btn,{onClick:()=>{onStart(range(n).map(i=>({id:i,name:(names[i]||`Player ${i+1}`).trim(),bet:bets[i]||10,score:0,isAI:i===0?false:!!isAI[i]})));}},t.startGame))
     )
   );
 }
@@ -791,10 +802,8 @@ function ResultScreen({res,players,rn,dealerIdx,onNext,isLast}){
 }
 
 // ─── 最终结算屏 ──────────────────────────────────────────
-function FinalScreen({players,results,stock,fair,onRestart}){
+function FinalScreen({players,results,stock,onRestart}){
   const lang=useLang();const t=T[lang];
-  const[copied,setCopied]=useState(null);
-  function copyField(key,val){try{navigator.clipboard.writeText(val);}catch(e){}setCopied(key);setTimeout(()=>setCopied(c=>c===key?null:c),1500);}
   const sorted=[...players].sort((a,b)=>b.score-a.score);
   function slotEval(key,SS){
     const cards=SS[key]||[];if(cards.length<SLOT_MAX[key])return null;
@@ -854,24 +863,6 @@ function FinalScreen({players,results,stock,fair,onRestart}){
           stock.map(c=>{const color=SUIT_CLR[c.suit];return React.createElement('div',{key:c.id,style:{display:'flex',flexDirection:'column',alignItems:'center',background:'#fffdf7',borderRadius:4,border:'1px solid #c9c2ab',padding:'3px 5px',boxSizing:'border-box',minWidth:26}},React.createElement('span',{style:{color,fontSize:12,fontWeight:800,fontFamily:'Georgia,serif',lineHeight:1,whiteSpace:'nowrap'}},c.rank),React.createElement(SuitIcon,{suit:c.suit,size:9,color}));})
         )
       ),
-      fair&&React.createElement('div',{style:{marginBottom:14,borderRadius:12,overflow:'hidden',border:'1px solid rgba(155,181,168,0.25)'}},
-        React.createElement('div',{style:{padding:'8px 12px',background:'rgba(155,181,168,0.1)',display:'flex',alignItems:'center',gap:8}},
-          React.createElement('span',{style:{fontSize:13}},'🛡️'),
-          React.createElement('span',{style:{color:'#cfe3d8',fontSize:13,fontWeight:700}},t.fairVerifyTitle)
-        ),
-        React.createElement('div',{style:{padding:'10px 12px',background:'rgba(0,0,0,0.15)'}},
-          React.createElement('div',{style:{color:'#9bb5a8',fontSize:10,lineHeight:1.5,marginBottom:10}},t.fairVerifyHint),
-          [[t.fairCommit,fair.serverSeedHash,'h'],[t.fairServerSeed,fair.serverSeed,'s'],[t.fairClientSeed,fair.clientSeed,'c'],[t.fairNonce,String(fair.nonce),'n']].map(([label,val,key])=>
-            React.createElement('div',{key,style:{marginBottom:8}},
-              React.createElement('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:2}},
-                React.createElement('span',{style:{color:'#cfe3d8',fontSize:10,fontWeight:600}},label),
-                React.createElement('button',{onClick:()=>copyField(key,val),style:{marginLeft:'auto',background:'none',border:'1px solid rgba(155,181,168,0.3)',borderRadius:5,color:copied===key?'#6fcf73':'#9bb5a8',fontSize:9,padding:'2px 7px',cursor:'pointer'}},copied===key?t.fairCopied:t.fairCopy)
-              ),
-              React.createElement('div',{style:{color:'#fffdf7',fontSize:10,fontFamily:'monospace',wordBreak:'break-all',background:'rgba(255,255,255,0.04)',borderRadius:5,padding:'5px 7px',lineHeight:1.4}},val)
-            )
-          )
-        )
-      ),
       React.createElement('div',{style:{marginTop:8}},React.createElement(Btn,{onClick:onRestart,style:{width:'100%'}},t.restart))
     )
   );
@@ -907,12 +898,56 @@ function GameFlow({players,setPlayers,game,setGame,onFinish}){
   return null;
 }
 
+// ─── 公平性浮层（隐蔽入口调出）──────────────────────────
+function FairModal({fair,onClose}){
+  const lang=useLang();const t=T[lang];
+  const[seed,setSeed]=useState((typeof window!=='undefined'&&window.__bbClientSeed)||'');
+  const[saved,setSaved]=useState(false);
+  const[copied,setCopied]=useState(null);
+  function copyField(key,val){try{navigator.clipboard.writeText(val);}catch(e){}setCopied(key);setTimeout(()=>setCopied(c=>c===key?null:c),1500);}
+  function saveSeed(){window.__bbClientSeed=seed;setSaved(true);setTimeout(()=>setSaved(false),1500);}
+  return React.createElement('div',{onClick:onClose,style:{position:'fixed',inset:0,background:'rgba(0,0,0,0.72)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:16}},
+    React.createElement('div',{onClick:e=>e.stopPropagation(),style:{maxWidth:440,width:'100%',maxHeight:'85vh',overflowY:'auto',background:'#0f1f17',borderRadius:16,border:'1px solid rgba(155,181,168,0.3)',boxSizing:'border-box'}},
+      React.createElement('div',{style:{padding:'14px 16px',display:'flex',alignItems:'center',gap:8,borderBottom:'1px solid rgba(255,255,255,0.08)',position:'sticky',top:0,background:'#0f1f17'}},
+        React.createElement('span',{style:{color:'#cfe3d8',fontSize:15,fontWeight:700}},t.fairModalTitle),
+        React.createElement('button',{onClick:onClose,style:{marginLeft:'auto',background:'none',border:'1px solid rgba(155,181,168,0.3)',borderRadius:7,color:'#9bb5a8',fontSize:12,padding:'4px 12px',cursor:'pointer'}},t.fairClose)
+      ),
+      React.createElement('div',{style:{padding:16}},
+        // 下一局客户端种子设置
+        React.createElement('div',{style:{marginBottom:16}},
+          React.createElement('div',{style:{color:'#9bb5a8',fontSize:11,marginBottom:6}},t.fairNextSeed),
+          React.createElement('div',{style:{display:'flex',gap:7}},
+            React.createElement('input',{value:seed,onChange:e=>setSeed(e.target.value),placeholder:t.clientSeedPlaceholder,style:{flex:1,minWidth:0,boxSizing:'border-box',padding:'9px 11px',borderRadius:8,border:'1px solid rgba(155,181,168,0.3)',background:'rgba(0,0,0,0.25)',color:'#fffdf7',fontSize:12,outline:'none',fontFamily:'monospace'}}),
+            React.createElement('button',{onClick:saveSeed,style:{flexShrink:0,background:saved?'rgba(111,207,115,0.15)':'rgba(155,181,168,0.12)',border:`1px solid ${saved?'rgba(111,207,115,0.5)':'rgba(155,181,168,0.3)'}`,borderRadius:8,color:saved?'#6fcf73':'#cfe3d8',fontSize:12,padding:'0 14px',cursor:'pointer'}},saved?t.fairSeedSaved:t.fairSave)
+          )
+        ),
+        // 最近一局验证信息
+        fair?React.createElement('div',null,
+          React.createElement('div',{style:{color:'#cfe3d8',fontSize:12,fontWeight:700,marginBottom:6}},t.fairLastGame),
+          React.createElement('div',{style:{color:'#9bb5a8',fontSize:10,lineHeight:1.5,marginBottom:10}},t.fairVerifyHint),
+          [[t.fairCommit,fair.serverSeedHash,'h'],[t.fairServerSeed,fair.serverSeed,'s'],[t.fairClientSeed,fair.clientSeed,'c'],[t.fairNonce,String(fair.nonce),'n']].map(([label,val,key])=>
+            React.createElement('div',{key,style:{marginBottom:8}},
+              React.createElement('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:2}},
+                React.createElement('span',{style:{color:'#cfe3d8',fontSize:10,fontWeight:600}},label),
+                React.createElement('button',{onClick:()=>copyField(key,val),style:{marginLeft:'auto',background:'none',border:'1px solid rgba(155,181,168,0.3)',borderRadius:5,color:copied===key?'#6fcf73':'#9bb5a8',fontSize:9,padding:'2px 7px',cursor:'pointer'}},copied===key?t.fairCopied:t.fairCopy)
+              ),
+              React.createElement('div',{style:{color:'#fffdf7',fontSize:10,fontFamily:'monospace',wordBreak:'break-all',background:'rgba(255,255,255,0.04)',borderRadius:5,padding:'5px 7px',lineHeight:1.4}},val)
+            )
+          )
+        ):React.createElement('div',{style:{color:'#9bb5a8',fontSize:11,lineHeight:1.5}},t.fairNoData)
+      )
+    )
+  );
+}
+
 // ─── 主 App ──────────────────────────────────────────────
 function App(){
   const[lang,setLang]=useState('en');
   const[stage,setStage]=useState('setup');
   const[players,setPlayers]=useState([]);
   const[game,setGame]=useState(null);
+  const[lastFair,setLastFair]=useState(null);// 留存最近一局公平性数据，供隐蔽入口查看
+  const[showFair,setShowFair]=useState(false);// 公平性浮层开关
   const toggleLang=()=>setLang(l=>l==='en'?'zh':'en');
   async function startGame(ps){
     clearPlans();
@@ -926,6 +961,7 @@ function App(){
     const hands=ps.map((_,i)=>deck.slice(i*11,i*11+11));
     const stock=deck.slice(ps.length*11);
     const fair={serverSeed,serverSeedHash,clientSeed,nonce};
+    setLastFair(fair);
     setGame({hands,stock,fair,rn:1,dealerIdx:null,curIdx:0,uiState:'pass',choices:[],results:[],pSlots:ps.map(()=>emptySlots())});
     setStage('play');
     // 利用「开始发牌」这个用户点击事件触发音乐
@@ -937,9 +973,10 @@ function App(){
   }
   return React.createElement(LangCtx.Provider,{value:{lang,toggleLang}},
     stage==='rules'?React.createElement(RulesScreen,{onBack:()=>setStage('setup')}):
-    stage==='setup'?React.createElement(SetupScreen,{onStart:startGame,onRules:()=>setStage('rules')}):
+    stage==='setup'?React.createElement(SetupScreen,{onStart:startGame,onRules:()=>setStage('rules'),onShowFair:()=>setShowFair(true)}):
     stage==='play'&&game?React.createElement(GameFlow,{players,setPlayers,game,setGame,onFinish:()=>setStage('done')}):
-    stage==='done'?React.createElement(FinalScreen,{players,results:game.results,stock:game.stock,fair:game.fair,onRestart:restart}):null
+    stage==='done'?React.createElement(FinalScreen,{players,results:game.results,stock:game.stock,onRestart:restart}):null,
+    showFair&&React.createElement(FairModal,{fair:lastFair,onClose:()=>setShowFair(false)})
   );
 }
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
