@@ -34,6 +34,9 @@ function HoldText({children,onHold,ms=1200,style}){
 const LangCtx=createContext({lang:'en',toggleLang:()=>{}});
 function useLang(){return useContext(LangCtx).lang;}
 function useToggleLang(){return useContext(LangCtx).toggleLang;}
+// ─── 游戏模式（'niu' 斗牛 / 'poker' 斗扑）──────────────────
+const ModeCtx=createContext('niu');
+function useMode(){return useContext(ModeCtx);}
 const T={
   en:{
     appName:'Bull Battle',appSub:'Banker · High · Low · Sam Kong · Niu Niu',
@@ -71,6 +74,8 @@ const T={
     niuMowang:'Bull King',niuDonggu:'Wild Bull',
     niuBaobaoAMax:'Twin Aces (Max)',niuBaobaoAMin:'Twin Aces (Min)',
     niuBaobao:'Twin',niu10:'Bull Ten (2x)',niuN:'Bull',noNiu:'No Bull',
+    pkRoyal:'Royal Flush',pkStraightFlush:'Straight Flush',pkFourKind:'Four of a Kind',pkFullHouse:'Full House',pkFlush:'Flush',pkStraight:'Straight',pkThreeKind:'Three of a Kind',pkTwoPair:'Two Pair',pkOnePair:'Pair',pkHighCard:'High Card',
+    modeNiu:'🐂 Bull Battle',modePoker:'🃏 Poker Battle',modeLabel:'Game Mode',r5titlePk:'Round 5 · Poker',r5descPk:'Play last 5 cards. Best poker hand wins.',slotPoker:'Poker',appNamePk:'Bull & Poker',
     triple:'Triple',tenPt:'Ten Points (2x)',pt:'Points',
     rulesSecs:[
       {icon:'👑',title:'Round 1 · Banker',lines:['Each player plays one card to bid or fold.','Highest bid card wins the Banker role.','If no one bids, lowest fold card becomes Banker.','Banker settles with all players independently.']},
@@ -79,6 +84,10 @@ const T={
       {icon:'🀄',title:'Round 4 · Sam Kong',lines:['Each player plays 3 cards. J/Q/K=10pts, A=1pt.','Sum the 3 cards, take last digit. Highest wins.','10pts=2x. Triple (3 same rank)=3x. Tie=draw.']},
       {icon:'🐂',title:'Round 5 · Niu Niu',lines:['Play last 5 cards. 3s and 6s are interchangeable.','Find 3 cards summing to multiple of 10. Remaining 2 determine Bull type.','Bull King > Wild Bull > Twin Aces(Max) > Twin K…2 > Twin Aces(Min) > Bull Ten > Bull 9…1 > No Bull.']},
       {icon:'🃏',title:'Special Hands',lines:['【Bull King】All 5 are J/Q/K. 10x. Banker wins unconditionally.','【Wild Bull】3 sum to 10x + Spade A + one J/Q/K. 5x.','【Twin Pairs】3 sum to 10x + remaining 2 same rank (a pair). 3x.','　• Pair of Aces WITH Spade A → Twin Aces (Max): highest of all twins.','　• Pair of Aces WITHOUT Spade A → Twin Aces (Min): lowest of all twins.','　• Other pairs (KK…22) → Twin K…Twin 2, ranked by value.','【Bull Ten】3 sum to 10x + remaining 2 sum to last digit 0. 2x.']},
+    ],
+    rules5Pk:[
+      {icon:'🃏',title:'Round 5 · Poker',lines:['Play your last 5 cards as a standard poker hand.','Highest hand type wins; the winner is paid by their hand\'s multiplier.','Same type → compare key cards then kickers in detail. Identical = draw.']},
+      {icon:'🏆',title:'Hand Ranking & Multipliers',lines:['Royal Flush (10 J Q K A, same suit) — 10x','Straight Flush (5 in a row, same suit) — 5x','Four of a Kind — 4x','Full House (three + pair) — 3x','Flush (5 same suit) — 2x','Straight (5 in a row) — 2x','Three of a Kind — 1x','Two Pair — 1x','One Pair — 1x','High Card — 1x','Note: A can be high (10JQKA) or low (A2345). No 3/6 swap in Poker mode.']},
     ],
   },
   zh:{
@@ -117,6 +126,8 @@ const T={
     niuMowang:'牛魔王',niuDonggu:'牛冬菇',
     niuBaobaoAMax:'牛宝宝A（最大）',niuBaobaoAMin:'牛宝宝1（最小）',
     niuBaobao:'牛宝宝',niu10:'牛10（双倍）',niuN:'牛',noNiu:'没牛',
+    pkRoyal:'皇家同花顺',pkStraightFlush:'同花顺',pkFourKind:'四条',pkFullHouse:'葫芦',pkFlush:'同花',pkStraight:'顺子',pkThreeKind:'三条',pkTwoPair:'两对',pkOnePair:'一对',pkHighCard:'高牌',
+    modeNiu:'🐂 大小公牛',modePoker:'🃏 大小公扑',modeLabel:'游戏模式',r5titlePk:'第五回合 · 斗扑',r5descPk:'出最后五张牌，比扑克牌型',slotPoker:'斗扑',appNamePk:'大小公扑',
     triple:'豹子',tenPt:'10点（双倍）',pt:'点',
     rulesSecs:[
       {icon:'👑',title:'第一回合 · 抢庄',lines:['每人出一张牌，可选择「抢庄」或「弃牌」。','抢庄者：牌面最大者当庄。','若无人抢庄：弃牌中最小者强制当庄。','庄家与所有闲家独立结算。']},
@@ -125,6 +136,10 @@ const T={
       {icon:'🀄',title:'第四回合 · 三公',lines:['每人出三张牌，J/Q/K算10点，A算1点。','三张之和取个位，越大越赢。10点双倍，豹子三倍。','点数相同则和局。']},
       {icon:'🐂',title:'第五回合 · 斗牛',lines:['五张牌，3和6可互换点数使用。','找三张之和为10的倍数，剩两张定牛型。','牛魔王>牛冬菇>牛宝宝A>牛宝宝K…2>牛宝宝1>牛10>牛9…1>没牛。']},
       {icon:'🃏',title:'特殊牛型',lines:['【牛魔王】五张全JQK，10倍，庄家拿到无条件赢全场。','【牛冬菇】三张凑10倍数+剩两张为黑桃A+一张JQK，5倍。','【牛宝宝】三张凑10倍数+剩两张同点数（一对），3倍。','　• 一对A且含黑桃A → 牛宝宝A，所有牛宝宝里最大。','　• 一对A但不含黑桃A → 牛宝宝1，所有牛宝宝里最小。','　• 其余对子（KK…22）→ 牛宝宝K…牛宝宝2，按点数大小排。','【牛10】三张凑10倍数+剩两张之和个位为0，2倍。']},
+    ],
+    rules5Pk:[
+      {icon:'🃏',title:'第五回合 · 斗扑',lines:['用最后五张牌组成标准扑克牌型比大小。','牌型大者赢，赢家按自己牌型的倍数 × 底注结算。','牌型相同则细比关键牌与踢脚牌；完全相同为和局。']},
+      {icon:'🏆',title:'牌型大小与倍数',lines:['皇家同花顺（同花10 J Q K A）— 10倍','同花顺（同花五连）— 5倍','四条（铁支，四张同点）— 4倍','葫芦（三条+一对）— 3倍','同花（五张同花色）— 2倍','顺子（五张连续）— 2倍','三条 — 1倍','两对 — 1倍','一对 — 1倍','高牌 — 1倍','说明：A 可作最大（10JQKA）或最小（A2345）。斗扑模式无「3/6互换」规则。']},
     ],
   },
 };
@@ -264,17 +279,64 @@ function evalNiu(cards,lang='en'){
 function cmpNiu(a,b){if(a.type==='none'&&b.type==='none')return 0;return a.cv-b.cv;}
 function cmpSK(a,b){return a.cv-b.cv;}
 
+// ─── 斗扑（Poker 牌型）────────────────────────────────────
+// 评估 5 张牌的 poker 牌型，返回 {type,mult,cv,label}。
+// cv 编码：等级在高位，关键牌点数（按重要性降序）在低位，确保同型可细比。
+function evalPoker(cards,lang='en'){
+  const t=T[lang];
+  if(!cards||cards.length!==5)return{type:'highcard',mult:1,cv:0,label:t.pkHighCard};
+  // 点数：2..10=2..10, J=11,Q=12,K=13,A=14
+  const rankVal=r=>({'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14}[r]);
+  const vals=cards.map(c=>rankVal(c.rank)).sort((a,b)=>b-a);// 降序
+  const suits=cards.map(c=>c.suit);
+  const isFlush=suits.every(s=>s===suits[0]);
+  // 顺子判定（含 A2345 轮子顺，此时 A 当 1，最高张为 5）
+  const uniq=[...new Set(vals)];
+  let isStraight=false,straightHigh=0;
+  if(uniq.length===5){
+    if(vals[0]-vals[4]===4){isStraight=true;straightHigh=vals[0];}
+    else if(vals[0]===14&&vals[1]===5&&vals[2]===4&&vals[3]===3&&vals[4]===2){isStraight=true;straightHigh=5;}// A2345
+  }
+  // 点数计数：用于对子/三条/四条/葫芦
+  const cnt={};vals.forEach(v=>cnt[v]=(cnt[v]||0)+1);
+  // groups: [count,value] 按 count 降序、value 降序
+  const groups=Object.keys(cnt).map(v=>[cnt[v],+v]).sort((a,b)=>b[0]-a[0]||b[1]-a[1]);
+  const counts=groups.map(g=>g[0]);
+  // 把"关键牌点数序列"编码成 cv：等级独占最高位，后接固定 5 张点数（每张2位），
+  // 不足5张补0，保证不同牌型间位数一致、等级始终主导。
+  const encode=(rank,seq)=>{const s=seq.slice(0,5);while(s.length<5)s.push(0);let cv=rank;for(let i=0;i<5;i++)cv=cv*100+s[i];return cv;}
+  // groups 的点数顺序天然就是 poker 比牌顺序（先比多的组，再比大的点）
+  const gv=groups.map(g=>g[1]);
+  // 牌型等级（越大越好）：9皇家 8同花顺 7四条 6葫芦 5同花 4顺子 3三条 2两对 1一对 0高牌
+  if(isStraight&&isFlush){
+    if(straightHigh===14)return{type:'royalflush',mult:10,cv:encode(9,[14]),label:t.pkRoyal};
+    return{type:'straightflush',mult:5,cv:encode(8,[straightHigh]),label:t.pkStraightFlush};
+  }
+  if(counts[0]===4)return{type:'fourkind',mult:4,cv:encode(7,gv),label:`${t.pkFourKind} ${rankName(groups[0][1])}`};
+  if(counts[0]===3&&counts[1]===2)return{type:'fullhouse',mult:3,cv:encode(6,gv),label:`${t.pkFullHouse} ${rankName(groups[0][1])}/${rankName(groups[1][1])}`};
+  if(isFlush)return{type:'flush',mult:2,cv:encode(5,vals),label:t.pkFlush};
+  if(isStraight)return{type:'straight',mult:2,cv:encode(4,[straightHigh]),label:`${t.pkStraight} ${rankName(straightHigh)}`};
+  if(counts[0]===3)return{type:'threekind',mult:1,cv:encode(3,gv),label:`${t.pkThreeKind} ${rankName(groups[0][1])}`};
+  if(counts[0]===2&&counts[1]===2)return{type:'twopair',mult:1,cv:encode(2,gv),label:`${t.pkTwoPair} ${rankName(groups[0][1])}/${rankName(groups[1][1])}`};
+  if(counts[0]===2)return{type:'onepair',mult:1,cv:encode(1,gv),label:`${t.pkOnePair} ${rankName(groups[0][1])}`};
+  return{type:'highcard',mult:1,cv:encode(0,vals),label:`${t.pkHighCard} ${rankName(vals[0])}`};
+}
+function rankName(v){return{11:'J',12:'Q',13:'K',14:'A'}[v]||String(v);}
+function cmpPoker(a,b){return a.cv-b.cv;}
+function winProbPoker(five,rem){const me=evalPoker(five);let w=0,v=0;for(let s=0;s<40;s++){const p=shuffle(rem).slice(0,5);if(p.length<5)break;v++;if(cmpPoker(me,evalPoker(p))>0)w++;}return v===0?0.5:w/v;}
+
 // ─── AI ──────────────────────────────────────────────────
 function combos(arr,k){const r=[];function h(s,c){if(c.length===k){r.push([...c]);return;}for(let i=s;i<arr.length;i++){c.push(arr[i]);h(i+1,c);c.pop();}}h(0,[]);return r;}
 function winProbSingle(card,rem,mode){const fn=mode==='lo'?cmpLo:cmpHi;let w=0,t=0;for(const o of rem){const c=fn(card,o);if(c>0)w++;else if(card.rank===o.rank)t++;}const d=rem.length-t;return d===0?0.5:w/d;}
 function winProbNiu(five,rem){const me=evalNiu(five);let w=0,v=0;for(let s=0;s<40;s++){const p=shuffle(rem).slice(0,5);if(p.length<5)break;v++;if(cmpNiu(me,evalNiu(p))>0)w++;}return v===0?0.5:w/v;}
 function winProbSK(three,rem){const me=evalSK(three);let w=0,v=0;for(let s=0;s<40;s++){const p=shuffle(rem).slice(0,3);if(p.length<3)break;v++;if(cmpSK(me,evalSK(p))>0)w++;}return v===0?0.5:w/v;}
-function genPlans(hand){
+function genPlans(hand,mode){
   if(hand.length<11)return[];const plans=[];
+  const evalR5=mode==='poker'?evalPoker:evalNiu;
   const top3=combos(hand,3).map(c=>({c,e:evalSK(c)})).sort((a,b)=>b.e.cv*b.e.mult-a.e.cv*a.e.mult).slice(0,12);
   for(const sk of top3){
     const skIds=new Set(sk.c.map(c=>c.id));const r8=hand.filter(c=>!skIds.has(c.id));if(r8.length<5)continue;
-    let bNiu=null,bNiuE=null;for(const fc of combos(r8,5)){const e=evalNiu(fc);if(!bNiuE||e.cv>bNiuE.cv){bNiuE=e;bNiu=fc;}}
+    let bNiu=null,bNiuE=null;for(const fc of combos(r8,5)){const e=evalR5(fc);if(!bNiuE||e.cv>bNiuE.cv){bNiuE=e;bNiu=fc;}}
     if(!bNiu)continue;
     const niuIds=new Set(bNiu.map(c=>c.id));const r3=r8.filter(c=>!niuIds.has(c.id));if(r3.length<3)continue;
     for(const[bi,hi,li]of[[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]])
@@ -282,14 +344,15 @@ function genPlans(hand){
   }
   return plans;
 }
-function buildPlan(hand,nPlayers){
+function buildPlan(hand,nPlayers,mode){
   if(hand.length<11)return null;
   const rem=makeDeck().filter(c=>!new Set(hand.map(x=>x.id)).has(c.id));
-  const plans=genPlans(hand);if(!plans.length)return null;
+  const plans=genPlans(hand,mode);if(!plans.length)return null;
+  const winProbR5=mode==='poker'?winProbPoker:winProbNiu;
   let best=null;
   for(const p of plans){
-    const eP=((2*winProbSingle(p.lowCard,rem,'lo')-1)*(p.lowCard.rank==='2'?2:1)+(2*winProbSingle(p.highCard,rem,'hi')-1)*(p.highCard.rank==='A'?2:1)+(2*winProbSK(p.sk,rem)-1)*p.skE.mult+(2*winProbNiu(p.niu,rem)-1)*p.niuE.mult)*10;
-    const avgP=(winProbSingle(p.lowCard,rem,'lo')+winProbSingle(p.highCard,rem,'hi')+winProbSK(p.sk,rem)+winProbNiu(p.niu,rem))/4;
+    const eP=((2*winProbSingle(p.lowCard,rem,'lo')-1)*(p.lowCard.rank==='2'?2:1)+(2*winProbSingle(p.highCard,rem,'hi')-1)*(p.highCard.rank==='A'?2:1)+(2*winProbSK(p.sk,rem)-1)*p.skE.mult+(2*winProbR5(p.niu,rem)-1)*p.niuE.mult)*10;
+    const avgP=(winProbSingle(p.lowCard,rem,'lo')+winProbSingle(p.highCard,rem,'hi')+winProbSK(p.sk,rem)+winProbR5(p.niu,rem))/4;
     const eD=eP*(nPlayers-1)*(avgP>=0.55?1:avgP>=0.5?0.85:0.6);
     const v=Math.max(eP,eD);if(!best||v>best.v)best={...p,v,wantDealer:eD>eP};
   }
@@ -297,13 +360,14 @@ function buildPlan(hand,nPlayers){
 }
 const planStore=new Map();
 function clearPlans(){planStore.clear();}
-function aiTurn(rn,hand,isDealer,pidx,nPlayers){
-  if(rn===1){const p=buildPlan(hand,nPlayers);planStore.set(pidx,p);if(!p){const s=[...hand].sort((a,b)=>cmpHi(b,a));return{cards:[s[0]],isBid:true,isFold:false};}return p.wantDealer?{cards:[p.bidCard],isBid:true,isFold:false}:{cards:[p.bidCard],isBid:false,isFold:true};}
+function aiTurn(rn,hand,isDealer,pidx,nPlayers,mode){
+  const evalR5=mode==='poker'?evalPoker:evalNiu;
+  if(rn===1){const p=buildPlan(hand,nPlayers,mode);planStore.set(pidx,p);if(!p){const s=[...hand].sort((a,b)=>cmpHi(b,a));return{cards:[s[0]],isBid:true,isFold:false};}return p.wantDealer?{cards:[p.bidCard],isBid:true,isFold:false}:{cards:[p.bidCard],isBid:false,isFold:true};}
   const p=planStore.get(pidx);
   if(rn===2){const t=p?.highCard;if(t&&hand.find(c=>c.id===t.id))return{cards:[t]};return{cards:[[...hand].sort((a,b)=>cmpHi(b,a))[0]]};}
   if(rn===3){const t=p?.lowCard;if(t&&hand.find(c=>c.id===t.id))return{cards:[t]};return{cards:[[...hand].sort((a,b)=>cmpLo(b,a))[0]]};}
   if(rn===4){if(p){const ih=p.sk.filter(c=>hand.find(h=>h.id===c.id));if(ih.length===3)return{cards:ih};}let bC=null,bE=null;for(const tc of combos(hand,3)){const e=evalSK(tc);if(!bE||e.cv>bE.cv){bE=e;bC=tc;}}return{cards:bC||hand.slice(0,3)};}
-  if(rn===5){if(p){const ih=p.niu.filter(c=>hand.find(h=>h.id===c.id));if(ih.length===5)return{cards:ih};}if(hand.length<=5)return{cards:hand};let bC=null,bE=null;for(const fc of combos(hand,5)){const e=evalNiu(fc);if(!bE||e.cv>bE.cv){bE=e;bC=fc;}}return{cards:bC||hand.slice(0,5)};}
+  if(rn===5){if(p){const ih=p.niu.filter(c=>hand.find(h=>h.id===c.id));if(ih.length===5)return{cards:ih};}if(hand.length<=5)return{cards:hand};let bC=null,bE=null;for(const fc of combos(hand,5)){const e=evalR5(fc);if(!bE||e.cv>bE.cv){bE=e;bC=fc;}}return{cards:bC||hand.slice(0,5)};}
   return{cards:[hand[0]]};
 }
 
@@ -538,12 +602,13 @@ function TopBar({rn}){
 
 // ─── 规划板 ──────────────────────────────────────────────
 function PlanBoard({hand,slots,onChange,currentRn,mode,setMode,onConfirm,confirmDisabled,confirmLabel}){
-  const lang=useLang();const t=T[lang];
+  const lang=useLang();const t=T[lang];const gameMode=useMode();
   const[sel,setSel]=useState(null);const[dragSrc,setDragSrc]=useState(null);const[over,setOver]=useState(null);
   const SS=safeSlots(slots);
   const slottedIds=new Set(Object.values(SS).flat().map(c=>c.id));
   const unslotted=(Array.isArray(hand)?hand:[]).filter(c=>!slottedIds.has(c.id)).sort((a,b)=>cmpHi(b,a));
-  const SLOT_LABEL={bid:t.slotBid,high:t.slotHigh,low:t.slotLow,sk:t.slotSK,niu:t.slotNiu};
+  const SLOT_LABEL={bid:t.slotBid,high:t.slotHigh,low:t.slotLow,sk:t.slotSK,niu:gameMode==='poker'?t.slotPoker:t.slotNiu};
+  const SLOT_ICO={...SLOT_ICON,niu:gameMode==='poker'?'🃏':'🐂'};
   function putInSlot(card,fromKey,toKey){const max=SLOT_MAX[toKey];if(!max)return;const cur=SS[toKey];const next={...SS};if(fromKey&&fromKey!=='hand')next[fromKey]=SS[fromKey].filter(c=>c.id!==card.id);if(cur.length<max)next[toKey]=[...cur,card];else next[toKey]=[...cur.slice(0,-1),card];onChange(next);}
   function removeFromSlot(card,fromKey){onChange({...SS,[fromKey]:SS[fromKey].filter(c=>c.id!==card.id)});}
   function onDS(card,from){setDragSrc({card,from});}function onDE(){setDragSrc(null);setOver(null);}
@@ -554,7 +619,7 @@ function PlanBoard({hand,slots,onChange,currentRn,mode,setMode,onConfirm,confirm
   function getSlotEval(key){
     const cards=SS[key];const full=cards.length>=SLOT_MAX[key];if(!full)return null;
     if(key==='sk'){const e=evalSK(cards,lang);return{label:e.label,color:e.mult===3?'#f0a500':e.mult===2?'#6fcf73':'#9bb5a8'};}
-    if(key==='niu'){const e=evalNiu(cards,lang);return{label:e.label,color:e.mult>=5?'#e57373':e.mult===3?'#f0a500':e.mult===2?'#6fcf73':'#9bb5a8'};}
+    if(key==='niu'){const e=(gameMode==='poker'?evalPoker:evalNiu)(cards,lang);return{label:e.label,color:e.mult>=10?'#e57373':e.mult>=3?'#f0a500':e.mult===2?'#6fcf73':'#9bb5a8'};}
     if(key==='high'){const c=cards[0];return c.rank==='A'?{label:'A · 2x',color:'#f0a500'}:{label:`${c.rank}${SUIT_SYM[c.suit]}`,color:'#9bb5a8'};}
     if(key==='low'){const c=cards[0];return c.rank==='2'?{label:'2 · 2x',color:'#6fcf73'}:{label:`${c.rank}${SUIT_SYM[c.suit]}`,color:'#9bb5a8'};}
     if(key==='bid'){const c=cards[0];return{label:`${c.rank}${SUIT_SYM[c.suit]}`,color:'#d4af37'};}
@@ -570,7 +635,7 @@ function PlanBoard({hand,slots,onChange,currentRn,mode,setMode,onConfirm,confirm
       SLOT_KEYS.map(key=>{
         const cards=SS[key];const full=cards.length>=SLOT_MAX[key];const isCur=SLOT_RN[key]===currentRn;const isPast=SLOT_RN[key]<currentRn;const ev=getSlotEval(key);
         return React.createElement('div',{key,onDragOver:e=>{e.preventDefault();setOver(key);},onDragLeave:()=>setOver(null),onDrop:()=>onDrop(key),onClick:()=>clickSlotArea(key),style:{flex:SLOT_MAX[key],minWidth:0,borderRadius:8,padding:'4px 3px 3px',boxSizing:'border-box',border:`1.5px ${over===key?'solid':'dashed'} ${isCur?'rgba(212,175,55,0.7)':full?'rgba(111,207,115,0.35)':'rgba(255,255,255,0.13)'}`,background:over===key?'rgba(212,175,55,0.1)':isCur?'rgba(212,175,55,0.05)':'rgba(255,255,255,0.02)',opacity:isPast?.4:1,cursor:'pointer'}},
-          React.createElement('div',{style:{display:'flex',alignItems:'center',gap:2,marginBottom:3,paddingLeft:2}},React.createElement('span',{style:{fontSize:9}},SLOT_ICON[key]),React.createElement('span',{style:{color:isCur?'#d4af37':'#9bb5a8',fontSize:8,fontWeight:600}},SLOT_LABEL[key]),React.createElement('span',{style:{color:'#6b7d74',fontSize:7,marginLeft:'auto',paddingRight:2}},`${cards.length}/${SLOT_MAX[key]}`)),
+          React.createElement('div',{style:{display:'flex',alignItems:'center',gap:2,marginBottom:3,paddingLeft:2}},React.createElement('span',{style:{fontSize:9}},SLOT_ICO[key]),React.createElement('span',{style:{color:isCur?'#d4af37':'#9bb5a8',fontSize:8,fontWeight:600}},SLOT_LABEL[key]),React.createElement('span',{style:{color:'#6b7d74',fontSize:7,marginLeft:'auto',paddingRight:2}},`${cards.length}/${SLOT_MAX[key]}`)),
           React.createElement('div',{style:{display:'flex',gap:2,flexWrap:'nowrap',minHeight:40,alignItems:'flex-start',overflowX:'hidden'}},
             cards.map(card=>React.createElement('div',{key:card.id,style:{display:'flex',flexDirection:'column',alignItems:'center',gap:1}},React.createElement(MiniCard,{card,selected:sel?.id===card.id,onClick:e=>{e.stopPropagation();clickSlotCard(card,key);},draggable:true,onDragStart:()=>onDS(card,key),onDragEnd:onDE}),React.createElement('span',{style:{color:SUIT_CLR[card.suit]==='#c0392b'?'#e57373':'#c9bfa0',fontSize:7.5,fontWeight:700,lineHeight:1}},`${card.rank}${SUIT_SYM[card.suit]}`))),
             cards.length===0&&React.createElement('div',{style:{width:'100%',display:'flex',alignItems:'center',justifyContent:'center',height:40}},React.createElement('span',{style:{color:'rgba(255,255,255,0.1)',fontSize:14}},'+'))
@@ -599,35 +664,36 @@ function PlanBoard({hand,slots,onChange,currentRn,mode,setMode,onConfirm,confirm
 
 // ─── 设置页 ──────────────────────────────────────────────
 // ─── 积分主页（人数/AI/初始积分 或 余额）──────────────────
-function HomeScreen({state,onProceed,onRules,onShowFair,onReset}){
+function HomeScreen({state,onProceed,onRules,onShowFair,onReset,onModeChange}){
   const lang=useLang();const t=T[lang];
   const inited=!!(state&&state.inited);
   const[n,setN]=useState(state?.n||4);
   const[names,setNames]=useState(state?.names||['Player 1','AI Player 2','AI Player 3','AI Player 4']);
   const[isAI,setIsAI]=useState(state?.isAI||[false,true,true,true]);
   const[initPts,setInitPts]=useState(state?.initPts||1000);
+  const[gmode,setGmode]=useState(state?.mode||'niu');
   const uN=(i,v)=>{const a=[...names];a[i]=v;setNames(a);};
   const tAI=(i)=>{if(i===0)return;const a=[...isAI];a[i]=!a[i];setIsAI(a);};
   function setCount(x){setN(x);setNames(p=>range(x).map((_,i)=>p[i]||(i===0?'Player 1':`AI Player ${i+1}`)));setIsAI(p=>range(x).map((_,i)=>i===0?false:(p[i]??true)));}
+  // 标题随模式变：公牛 / 公扑
+  const titleTxt=gmode==='poker'?t.appNamePk:t.appName;
   function proceed(){
     const cleanNames=range(n).map(i=>(names[i]||`Player ${i+1}`).trim());
     const ai=range(n).map(i=>i===0?false:!!isAI[i]);
     if(inited){
-      // 已有积分：沿用钱包，进投注页
       const wallet=range(n).map(i=>(state.wallet&&state.wallet[i]!=null)?state.wallet[i]:initPts);
-      onProceed({inited:true,n,names:cleanNames,isAI:ai,initPts:state.initPts,wallet});
+      onProceed({inited:true,n,names:cleanNames,isAI:ai,initPts:state.initPts,wallet,mode:gmode});
     }else{
-      // 首次：用初始积分填充钱包
       const wallet=range(n).map(()=>initPts);
-      onProceed({inited:true,n,names:cleanNames,isAI:ai,initPts,wallet});
+      onProceed({inited:true,n,names:cleanNames,isAI:ai,initPts,wallet,mode:gmode});
     }
   }
   return React.createElement(Shell,null,React.createElement(TopControls,{onReset:inited?onReset:null}),
     React.createElement('div',{style:{flex:1,padding:'36px 20px',maxWidth:480,margin:'0 auto',width:'100%',boxSizing:'border-box'}},
-      React.createElement('div',{style:{textAlign:'center',marginBottom:28}},
-        React.createElement('div',{style:{fontSize:44}},'🐂🀄'),
+      React.createElement('div',{style:{textAlign:'center',marginBottom:24}},
+        React.createElement('div',{style:{fontSize:44}},gmode==='poker'?'🃏🀄':'🐂🀄'),
         React.createElement('div',{style:{color:'#fffdf7',fontSize:26,fontWeight:700,marginTop:8,fontFamily:'Georgia,serif'}},
-          (()=>{const txt=t.appName;const idx=txt.indexOf('公')>=0?txt.indexOf('公'):Math.min(2,txt.length-1);
+          (()=>{const txt=titleTxt;const idx=txt.indexOf('公')>=0?txt.indexOf('公'):Math.min(2,txt.length-1);
             return Array.from(txt).map((ch,i)=>i===idx
               ?React.createElement(HoldText,{key:i,onHold:onShowFair},ch)
               :React.createElement('span',{key:i},ch));
@@ -635,6 +701,10 @@ function HomeScreen({state,onProceed,onRules,onShowFair,onReset}){
         ),
         React.createElement('div',{style:{color:'#9bb5a8',fontSize:13,marginTop:4}},t.appSub),
         React.createElement('button',{onClick:onRules,style:{marginTop:10,background:'none',border:'1px solid rgba(212,175,55,0.35)',borderRadius:999,color:'#d4af37',fontSize:12,padding:'5px 16px',cursor:'pointer'}},t.rules)
+      ),
+      React.createElement('div',{style:{color:'#d4af37',fontSize:12,marginBottom:8,letterSpacing:1}},t.modeLabel),
+      React.createElement('div',{style:{display:'flex',gap:8,marginBottom:22}},
+        [['niu',t.modeNiu],['poker',t.modePoker]].map(([m,label])=>React.createElement('button',{key:m,onClick:()=>{setGmode(m);onModeChange&&onModeChange(m);},style:{flex:1,padding:'13px 0',borderRadius:10,fontSize:14,fontWeight:700,border:gmode===m?'2px solid #d4af37':'1px solid rgba(212,175,55,0.25)',background:gmode===m?'rgba(212,175,55,0.15)':'transparent',color:gmode===m?'#d4af37':'#9bb5a8',cursor:'pointer'}},label))
       ),
       React.createElement('div',{style:{color:'#d4af37',fontSize:12,marginBottom:8,letterSpacing:1}},t.players),
       React.createElement('div',{style:{display:'flex',gap:8,marginBottom:22}},[2,3,4].map(x=>React.createElement('button',{key:x,onClick:()=>setCount(x),style:{flex:1,padding:'11px 0',borderRadius:10,fontSize:15,fontWeight:700,border:n===x?'2px solid #d4af37':'1px solid rgba(212,175,55,0.25)',background:n===x?'rgba(212,175,55,0.15)':'transparent',color:n===x?'#d4af37':'#9bb5a8',cursor:'pointer'}},x))),
@@ -709,14 +779,15 @@ function ResetConfirm({onYes,onNo}){
 
 // ─── 规则页 ──────────────────────────────────────────────
 function RulesScreen({onBack}){
-  const lang=useLang();const t=T[lang];
+  const lang=useLang();const t=T[lang];const mode=useMode();
+  const secs=mode==='poker'?[...t.rulesSecs.slice(0,4),...t.rules5Pk]:t.rulesSecs;
   return React.createElement(Shell,null,React.createElement(TopControls,null),
     React.createElement('div',{style:{padding:'18px 16px 10px',display:'flex',alignItems:'center',gap:10,borderBottom:'1px solid rgba(212,175,55,0.2)'}},
       React.createElement('button',{onClick:onBack,style:{background:'none',border:'none',color:'#d4af37',fontSize:20,cursor:'pointer',lineHeight:1}},t.rulesBack),
       React.createElement('div',null,React.createElement('div',{style:{color:'#d4af37',fontSize:12}},'📖'),React.createElement('div',{style:{color:'#fffdf7',fontSize:17,fontWeight:700}},t.rulesTitle))
     ),
     React.createElement('div',{style:{flex:1,padding:'16px 18px 32px',maxWidth:480,margin:'0 auto',width:'100%',boxSizing:'border-box',overflowY:'auto'}},
-      t.rulesSecs.map((s,i)=>React.createElement('div',{key:i,style:{marginBottom:20}},
+      secs.map((s,i)=>React.createElement('div',{key:i,style:{marginBottom:20}},
         React.createElement('div',{style:{display:'flex',alignItems:'center',gap:7,marginBottom:7}},React.createElement('span',{style:{fontSize:16}},s.icon),React.createElement('span',{style:{color:'#d4af37',fontWeight:700,fontSize:14}},s.title)),
         React.createElement('div',{style:{padding:'10px 12px',borderRadius:10,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(212,175,55,0.1)'}},s.lines.map((l,j)=>React.createElement('div',{key:j,style:{color:'#c9bfa0',fontSize:13,lineHeight:1.7,display:'flex',gap:5}},React.createElement('span',{style:{color:'rgba(212,175,55,0.45)',flexShrink:0}},'·'),React.createElement('span',null,l))))
       ))
@@ -747,9 +818,9 @@ function PassScreen({name,sub,onReveal,auto}){
 }
 
 function AIScreen({player,hand,rn,isDealer,pidx,nPlayers,onDone}){
-  const lang=useLang();const t=T[lang];
+  const lang=useLang();const t=T[lang];const mode=useMode();
   const[dots,setDots]=useState('');const fired=useRef(false);
-  useEffect(()=>{const t1=setInterval(()=>setDots(d=>d.length>=3?'':d+'.'),350);const t2=setTimeout(()=>{if(fired.current)return;fired.current=true;onDone(aiTurn(rn,hand,isDealer,pidx,nPlayers));},900);return()=>{clearInterval(t1);clearTimeout(t2);};},[]);
+  useEffect(()=>{const t1=setInterval(()=>setDots(d=>d.length>=3?'':d+'.'),350);const t2=setTimeout(()=>{if(fired.current)return;fired.current=true;onDone(aiTurn(rn,hand,isDealer,pidx,nPlayers,mode));},900);return()=>{clearInterval(t1);clearTimeout(t2);};},[]);
   return React.createElement(Shell,null,React.createElement(TopControls,null),
     React.createElement('div',{style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}},
       React.createElement('div',{style:{fontSize:50,marginBottom:12}},'🤖'),
@@ -760,11 +831,11 @@ function AIScreen({player,hand,rn,isDealer,pidx,nPlayers,onDone}){
 }
 
 function HumanScreen({player,hand,rn,isDealer,slots,onSlots,onSubmit}){
-  const lang=useLang();const t=T[lang];
+  const lang=useLang();const t=T[lang];const gameMode=useMode();
   const[mode,setMode]=useState(null);const SS=safeSlots(slots);
   const slotKey=SLOT_KEYS.find(k=>SLOT_RN[k]===rn);
   const curCards=slotKey?SS[slotKey]:[];const needed=slotKey?SLOT_MAX[slotKey]:0;const ready=curCards.length===needed;
-  const slotLabel={bid:t.slotBid,high:t.slotHigh,low:t.slotLow,sk:t.slotSK,niu:t.slotNiu};
+  const slotLabel={bid:t.slotBid,high:t.slotHigh,low:t.slotLow,sk:t.slotSK,niu:gameMode==='poker'?t.slotPoker:t.slotNiu};
   const confirmDisabled=rn===1?!(SS.bid.length===1&&mode):!ready;
   const confirmLabel=rn===1?`${t.confirm} ${mode==='bid'?t.confirmBid:mode==='fold'?t.confirmFold:t.pleaseSelect}`:ready?t.confirmPlay:`${slotLabel[slotKey]} ${curCards.length}/${needed}`;
   function handleConfirm(){if(rn===1){if(!SS.bid[0]||!mode)return;onSubmit({cards:[SS.bid[0]],isBid:mode==='bid',isFold:mode==='fold'});}else{if(curCards.length!==needed)return;onSubmit({cards:curCards});}}
@@ -828,11 +899,25 @@ function resolveNiu(nc,players,dIdx,lang){
   }
   return{rn:5,dealerIdx:dIdx,choices:nc,deltas,details,dE};
 }
+// 斗扑结算：闲家与庄家各比 poker 牌型，赢家按自己牌型倍数 × 底注结算
+function resolvePoker(nc,players,dIdx,lang){
+  const deltas=range(players.length).map(()=>0);const dc=nc.find(c=>c.pidx===dIdx);const dE=evalPoker(dc.cards,lang);const details=[];
+  for(const c of nc){
+    if(c.pidx===dIdx)continue;const p=players[c.pidx];const pE=evalPoker(c.cards,lang);
+    const cmp=cmpPoker(pE,dE);
+    if(cmp===0){details.push({pidx:c.pidx,tie:true,pE,dE});continue;}
+    const win=cmp>0;const winnerE=win?pE:dE;const mult=winnerE.mult;const amt=p.bet*mult;
+    if(win){deltas[c.pidx]+=amt;deltas[dIdx]-=amt;}else{deltas[c.pidx]-=amt;deltas[dIdx]+=amt;}
+    details.push({pidx:c.pidx,win,mult,amt,pE,dE});
+  }
+  return{rn:5,dealerIdx:dIdx,choices:nc,deltas,details,dE};
+}
 
 // ─── 回合结果屏 ──────────────────────────────────────────
 function ResultScreen({res,players,rn,dealerIdx,onNext,isLast}){
-  const lang=useLang();const t=T[lang];
-  const RMeta={1:{title:t.r1title,icon:'👑'},2:{title:t.r2title,icon:'🔺'},3:{title:t.r3title,icon:'🔻'},4:{title:t.r4title,icon:'🀄'},5:{title:t.r5title,icon:'🐂'}};
+  const lang=useLang();const t=T[lang];const mode=useMode();
+  const evalR5=mode==='poker'?evalPoker:evalNiu;
+  const RMeta={1:{title:t.r1title,icon:'👑'},2:{title:t.r2title,icon:'🔺'},3:{title:t.r3title,icon:'🔻'},4:{title:t.r4title,icon:'🀄'},5:{title:mode==='poker'?t.r5titlePk:t.r5title,icon:mode==='poker'?'🃏':'🐂'}};
   const meta=RMeta[rn];
   // 庄家出的牌
   const dealerCards=res.choices.find(c=>c.pidx===dealerIdx)?.cards||[];
@@ -865,7 +950,7 @@ function ResultScreen({res,players,rn,dealerIdx,onNext,isLast}){
           ),
           React.createElement('div',{style:{display:'flex',gap:5,flexWrap:'wrap'}},dealerCards.map(c=>React.createElement(Card,{key:c.id,card:c,size:'sm'}))),
           // 庄家牌型实时重算
-          (()=>{const liveDE=rn===4&&dealerCards.length===3?evalSK(dealerCards,lang):rn===5&&dealerCards.length===5?evalNiu(dealerCards,lang):null;return liveDE&&React.createElement('div',{style:{color:'#d4af37',fontSize:12,marginTop:6,fontWeight:600}},liveDE.label);})()
+          (()=>{const liveDE=rn===4&&dealerCards.length===3?evalSK(dealerCards,lang):rn===5&&dealerCards.length===5?evalR5(dealerCards,lang):null;return liveDE&&React.createElement('div',{style:{color:'#d4af37',fontSize:12,marginTop:6,fontWeight:600}},liveDE.label);})()
         ),
         // 闲家行
                   res.details.map(d=>{
@@ -873,7 +958,7 @@ function ResultScreen({res,players,rn,dealerIdx,onNext,isLast}){
           const playerHasDouble=(rn===2&&playerCards[0]?.rank==='A')||(rn===3&&playerCards[0]?.rank==='2');
           const showDouble=(rn===2||rn===3)&&!d.tie&&(playerHasDouble||dealerHasDouble);
           // 实时用当前语言重算牌型名称
-          const livePlayerE=rn===4&&playerCards.length===3?evalSK(playerCards,lang):rn===5&&playerCards.length===5?evalNiu(playerCards,lang):null;
+          const livePlayerE=rn===4&&playerCards.length===3?evalSK(playerCards,lang):rn===5&&playerCards.length===5?evalR5(playerCards,lang):null;
           return React.createElement('div',{key:d.pidx,style:{background:d.tie?'rgba(255,255,255,0.04)':d.win?'rgba(56,142,60,0.12)':'rgba(192,57,43,0.1)',border:`1px solid ${d.tie?'rgba(255,255,255,0.08)':d.win?'rgba(56,142,60,0.3)':'rgba(192,57,43,0.28)'}`,borderRadius:12,padding:12,marginBottom:8}},
             React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}},
               React.createElement('span',{style:{color:'#fffdf7',fontWeight:700,fontSize:14}},players[d.pidx].name),
@@ -901,18 +986,19 @@ function ResultScreen({res,players,rn,dealerIdx,onNext,isLast}){
 
 // ─── 最终结算屏 ──────────────────────────────────────────
 function FinalScreen({players,results,stock,onRestart}){
-  const lang=useLang();const t=T[lang];
+  const lang=useLang();const t=T[lang];const mode=useMode();
   const sorted=[...players].sort((a,b)=>b.score-a.score);
   function slotEval(key,SS){
     const cards=SS[key]||[];if(cards.length<SLOT_MAX[key])return null;
     if(key==='sk'){const e=evalSK(cards,lang);return{label:e.label,color:e.mult===3?'#f0a500':e.mult===2?'#6fcf73':'#9bb5a8'};}
-    if(key==='niu'){const e=evalNiu(cards,lang);return{label:e.label,color:e.mult>=5?'#e57373':e.mult===3?'#f0a500':e.mult===2?'#6fcf73':'#9bb5a8'};}
+    if(key==='niu'){const e=(mode==='poker'?evalPoker:evalNiu)(cards,lang);return{label:e.label,color:e.mult>=10?'#e57373':e.mult>=3?'#f0a500':e.mult===2?'#6fcf73':'#9bb5a8'};}
     if(key==='high'){const c=cards[0];return c.rank==='A'?{label:'A·2x',color:'#f0a500'}:{label:`${c.rank}${SUIT_SYM[c.suit]}`,color:'#9bb5a8'};}
     if(key==='low'){const c=cards[0];return c.rank==='2'?{label:'2·2x',color:'#6fcf73'}:{label:`${c.rank}${SUIT_SYM[c.suit]}`,color:'#9bb5a8'};}
     if(key==='bid'){const c=cards[0];return{label:`${c.rank}${SUIT_SYM[c.suit]}`,color:'#d4af37'};}
     return null;
   }
-  const SLOT_LABEL={bid:t.slotBid,high:t.slotHigh,low:t.slotLow,sk:t.slotSK,niu:t.slotNiu};
+  const SLOT_LABEL={bid:t.slotBid,high:t.slotHigh,low:t.slotLow,sk:t.slotSK,niu:mode==='poker'?t.slotPoker:t.slotNiu};
+  const SLOT_ICO={...SLOT_ICON,niu:mode==='poker'?'🃏':'🐂'};
   return React.createElement(Shell,null,React.createElement(TopControls,null),
     React.createElement('div',{style:{flex:1,overflowY:'auto',padding:'28px 14px 40px',maxWidth:500,margin:'0 auto',width:'100%',boxSizing:'border-box'}},
       React.createElement('div',{style:{textAlign:'center',marginBottom:20}},
@@ -943,7 +1029,7 @@ function FinalScreen({players,results,stock,onRestart}){
             SLOT_KEYS.map(key=>{
               const cards=SS[key]||[];const ev=slotEval(key,SS);
               return React.createElement('div',{key,style:{flex:SLOT_MAX[key],minWidth:0,borderRadius:7,border:'1px solid rgba(255,255,255,0.1)',background:'rgba(255,255,255,0.03)',padding:'4px 2px 4px',boxSizing:'border-box'}},
-                React.createElement('div',{style:{display:'flex',alignItems:'center',gap:2,marginBottom:3,paddingLeft:2}},React.createElement('span',{style:{fontSize:8}},SLOT_ICON[key]),React.createElement('span',{style:{color:'#9bb5a8',fontSize:7.5,fontWeight:600}},SLOT_LABEL[key])),
+                React.createElement('div',{style:{display:'flex',alignItems:'center',gap:2,marginBottom:3,paddingLeft:2}},React.createElement('span',{style:{fontSize:8}},SLOT_ICO[key]),React.createElement('span',{style:{color:'#9bb5a8',fontSize:7.5,fontWeight:600}},SLOT_LABEL[key])),
                 React.createElement('div',{style:{display:'flex',gap:1,flexWrap:'nowrap',overflowX:'hidden',minHeight:28}},
                   cards.length>0?cards.map(c=>{const color=SUIT_CLR[c.suit];return React.createElement('div',{key:c.id,style:{flexShrink:1,minWidth:0,display:'flex',flexDirection:'column',alignItems:'center',background:'#fffdf7',borderRadius:3,border:'1px solid #c9c2ab',padding:'1px 2px',boxSizing:'border-box'}},React.createElement('span',{style:{color,fontSize:9,fontWeight:800,fontFamily:'Georgia,serif',lineHeight:1,whiteSpace:'nowrap'}},c.rank),React.createElement(SuitIcon,{suit:c.suit,size:7,color}));})
                   :React.createElement('div',{style:{width:'100%',height:28,display:'flex',alignItems:'center',justifyContent:'center'}},React.createElement('span',{style:{color:'rgba(255,255,255,0.12)',fontSize:11}},'—'))
@@ -971,7 +1057,7 @@ function FinalScreen({players,results,stock,onRestart}){
 
 // ─── 游戏流程 ────────────────────────────────────────────
 function GameFlow({players,setPlayers,game,setGame,onFinish}){
-  const lang=useLang();
+  const lang=useLang();const mode=useMode();
   const n=players.length;const{rn,curIdx,uiState,choices,pSlots,hands}=game;const cur=players[curIdx];const t=T[lang];
   function submit(payload){const nc=[...choices,{pidx:curIdx,...payload}];if(curIdx+1<n)setGame({...game,choices:nc,curIdx:curIdx+1,uiState:'pass'});else resolveRound(nc);}
   function resolveRound(nc){
@@ -980,7 +1066,7 @@ function GameFlow({players,setPlayers,game,setGame,onFinish}){
     else if(rn===2)res=resolveCmp(nc,players,game.dealerIdx,cmpHi,2,'hi');
     else if(rn===3)res=resolveCmp(nc,players,game.dealerIdx,cmpLo,2,'lo');
     else if(rn===4)res=resolveSK(nc,players,game.dealerIdx,lang);
-    else res=resolveNiu(nc,players,game.dealerIdx,lang);
+    else res=(mode==='poker')?resolvePoker(nc,players,game.dealerIdx,lang):resolveNiu(nc,players,game.dealerIdx,lang);
     const newHands=hands.map((h,i)=>{const c=nc.find(x=>x.pidx===i);const ids=new Set((c?.cards||[]).map(x=>x.id));return h.filter(x=>!ids.has(x.id));});
     const scores=players.map(p=>p.score);res.deltas.forEach((d,i)=>{scores[i]+=d;});setPlayers(players.map((p,i)=>({...p,score:scores[i]})));
     const slotKey=SLOT_KEYS.find(k=>SLOT_RN[k]===rn);
@@ -1051,6 +1137,7 @@ function App(){
   const[lastFair,setLastFair]=useState(null);// 留存最近一局公平性数据，供隐蔽入口查看
   const[showFair,setShowFair]=useState(false);// 公平性浮层开关
   const[askReset,setAskReset]=useState(false);// 重置确认浮层
+  const[viewMode,setViewMode]=useState(()=>{const s=loadState();return(s&&s.mode)||'niu';});// 主页/规则页当前选择的模式
   const toggleLang=()=>setLang(l=>l==='en'?'zh':'en');
   // HomeScreen 完成：保存持久状态，进投注页
   function proceedFromHome(st){setPstate(st);saveState(st);setStage('bet');}
@@ -1081,14 +1168,17 @@ function App(){
   }
   // 重置：清空积分，回初始积分输入界面
   function doReset(){clearState();setPstate(null);setGame(null);setAskReset(false);setStage('home');}
+  const curMode=(pstate&&pstate.mode)||viewMode;
   return React.createElement(LangCtx.Provider,{value:{lang,toggleLang}},
-    stage==='rules'?React.createElement(RulesScreen,{onBack:()=>setStage('home')}):
-    stage==='home'?React.createElement(HomeScreen,{state:pstate,onProceed:proceedFromHome,onRules:()=>setStage('rules'),onShowFair:()=>setShowFair(true),onReset:()=>setAskReset(true)}):
-    stage==='bet'&&pstate?React.createElement(BetScreen,{state:pstate,onBack:()=>setStage('home'),onStart:startGame,onReset:()=>setAskReset(true)}):
-    stage==='play'&&game?React.createElement(GameFlow,{players,setPlayers,game,setGame,onFinish:()=>setStage('done')}):
-    stage==='done'?React.createElement(FinalScreen,{players,results:game.results,stock:game.stock,onRestart:()=>finishGame(players)}):null,
-    showFair&&React.createElement(FairModal,{fair:lastFair,onClose:()=>setShowFair(false)}),
-    askReset&&React.createElement(ResetConfirm,{onYes:doReset,onNo:()=>setAskReset(false)})
+    React.createElement(ModeCtx.Provider,{value:curMode},
+      stage==='rules'?React.createElement(RulesScreen,{onBack:()=>setStage('home')}):
+      stage==='home'?React.createElement(HomeScreen,{state:pstate,onProceed:proceedFromHome,onRules:()=>setStage('rules'),onShowFair:()=>setShowFair(true),onReset:()=>setAskReset(true),onModeChange:setViewMode}):
+      stage==='bet'&&pstate?React.createElement(BetScreen,{state:pstate,onBack:()=>setStage('home'),onStart:startGame,onReset:()=>setAskReset(true)}):
+      stage==='play'&&game?React.createElement(GameFlow,{players,setPlayers,game,setGame,onFinish:()=>setStage('done')}):
+      stage==='done'?React.createElement(FinalScreen,{players,results:game.results,stock:game.stock,onRestart:()=>finishGame(players)}):null,
+      showFair&&React.createElement(FairModal,{fair:lastFair,onClose:()=>setShowFair(false)}),
+      askReset&&React.createElement(ResetConfirm,{onYes:doReset,onNo:()=>setAskReset(false)})
+    )
   );
 }
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
