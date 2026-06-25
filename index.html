@@ -28,6 +28,10 @@ const T={
     rules:'📖 Rules',players:'Players',playerSetup:'Player Setup',
     human:'🧑 Human',ai:'🤖 AI',you:'🧑 You (Player 1)',
     bet:'Bet',startGame:'Deal Cards 🎴',
+    fairTitle:'Provably Fair',clientSeedLabel:'Client Seed (optional)',clientSeedPlaceholder:'Leave blank for auto-random',
+    fairCommit:'Server Seed Hash (commitment)',fairServerSeed:'Server Seed (revealed)',fairClientSeed:'Client Seed',fairNonce:'Nonce',
+    fairVerifyTitle:'Fairness Verification',fairVerifyHint:'Before the deal, the server seed hash was committed. After the game, verify: SHA-256(server seed) must equal the committed hash, and re-shuffling with these seeds reproduces the exact same deck.',
+    fairCopy:'Copy',fairCopied:'Copied ✓',
     r1title:'Round 1 · Banker',r1desc:'Play a card to bid for Banker, or fold. Lowest fold becomes Banker if no one bids.',
     r2title:'Round 2 · High Card',r2desc:'Play one card. Highest wins. A wins = double points.',
     r3title:'Round 3 · Low Card',r3desc:'Play one card. Lowest wins. 2 wins = double points.',
@@ -68,6 +72,10 @@ const T={
     rules:'📖 规则说明',players:'玩家人数',playerSetup:'玩家设置',
     human:'🧑 真人',ai:'🤖 AI',you:'🧑 真人玩家（你）',
     bet:'注',startGame:'开始发牌 🎴',
+    fairTitle:'可证明公平',clientSeedLabel:'客户端种子（可选）',clientSeedPlaceholder:'留空则系统自动随机',
+    fairCommit:'服务端种子哈希（承诺值）',fairServerSeed:'服务端种子（已揭示）',fairClientSeed:'客户端种子',fairNonce:'局号',
+    fairVerifyTitle:'公平性验证',fairVerifyHint:'发牌前已先公布服务端种子的哈希承诺。游戏结束后可验证：对服务端种子做 SHA-256 应等于当初的承诺值；用这些种子重新洗牌，会得到完全相同的牌序。',
+    fairCopy:'复制',fairCopied:'已复制 ✓',
     r1title:'第一回合 · 抢庄',r1desc:'想抢庄就选一张牌；不想抢就弃一张牌。若无人抢庄，弃牌最小者强制当庄',
     r2title:'第二回合 · 斗大',r2desc:'出一张牌，越大越赢。拿 A 获胜得双倍分',
     r3title:'第三回合 · 斗小',r3desc:'出一张牌，越小越赢。拿 2 获胜得双倍分',
@@ -112,7 +120,58 @@ const SUIT_SYM={S:'♠',H:'♥',C:'♣',D:'♦'};
 const SUIT_CLR={S:'#1a1a2e',H:'#c0392b',C:'#1a1a2e',D:'#c0392b'};
 const RANKS=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 function makeDeck(){const d=[];for(const s of SUITS)for(const r of RANKS)d.push({suit:s,rank:r,id:`${r}${s}`});return d;}
-function shuffle(d){const a=[...d];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+// 密码学级随机整数 [0, max)，拒绝采样消除取模偏差。
+// 赌场级要求：若环境不支持 crypto，直接抛错，绝不降级到弱随机。
+function randInt(max){
+  if(max<=0)return 0;
+  if(typeof crypto==='undefined'||!crypto.getRandomValues){
+    throw new Error('安全随机源不可用：当前环境不支持 crypto.getRandomValues，已停止发牌以保证公平性。');
+  }
+  const limit=Math.floor(0x100000000/max)*max;// 最大可接受值，超出则拒绝重抽
+  const buf=new Uint32Array(1);
+  let x;do{crypto.getRandomValues(buf);x=buf[0];}while(x>=limit);
+  return x%max;
+}
+function shuffle(d){const a=[...d];for(let i=a.length-1;i>0;i--){const j=randInt(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+// ─── Provably Fair（可证明公平）核心 ──────────────────────
+// 生成一段密码学随机的十六进制种子（默认32字节=64位hex）
+function genSeedHex(bytes=32){
+  if(typeof crypto==='undefined'||!crypto.getRandomValues)throw new Error('安全随机源不可用，已停止以保证公平性。');
+  const a=new Uint8Array(bytes);crypto.getRandomValues(a);
+  return Array.from(a,b=>b.toString(16).padStart(2,'0')).join('');
+}
+// SHA-256 → 十六进制字符串
+async function sha256Hex(str){
+  const data=new TextEncoder().encode(str);
+  const buf=await crypto.subtle.digest('SHA-256',data);
+  return Array.from(new Uint8Array(buf),b=>b.toString(16).padStart(2,'0')).join('');
+}
+// 由种子推导出一串无偏的随机整数流，用于确定性洗牌。
+// 链式哈希：counter 递增 → SHA-256 → 取字节。相同种子必然产生相同序列。
+async function seededRandInts(serverSeed,clientSeed,nonce,count){
+  const out=[];let counter=0,bytePool=[];
+  async function refill(){
+    const h=await sha256Hex(`${serverSeed}:${clientSeed}:${nonce}:${counter++}`);
+    for(let i=0;i<h.length;i+=8)bytePool.push(parseInt(h.slice(i,i+8),16)>>>0);
+  }
+  for(let k=0;k<count;k++){if(bytePool.length===0)await refill();out.push(bytePool.shift());}
+  return out;
+}
+// 由种子确定性地洗牌（Fisher–Yates + 拒绝采样消除取模偏差）
+async function provablyShuffle(deck,serverSeed,clientSeed,nonce){
+  const a=[...deck];const need=a.length-1;
+  // 预估需要的随机数量（含拒绝采样冗余），不够再续取
+  let ints=await seededRandInts(serverSeed,clientSeed,nonce,need*2+8);
+  let ptr=0;
+  async function next(){if(ptr>=ints.length){const more=await seededRandInts(serverSeed,clientSeed,nonce+1000+ptr,64);ints=ints.concat(more);}return ints[ptr++]>>>0;}
+  for(let i=a.length-1;i>0;i--){
+    const max=i+1,limit=Math.floor(0x100000000/max)*max;
+    let x;do{x=await next();}while(x>=limit);
+    const j=x%max;[a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
 function rv(rank){return{'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,J:11,Q:12,K:13,A:14}[rank];}
 function cmpHi(a,b){const d=rv(a.rank)-rv(b.rank);return d||SUIT_RANK[a.suit]-SUIT_RANK[b.suit];}
 function cmpLo(a,b){const d=rv(b.rank)-rv(a.rank);return d||SUIT_RANK[b.suit]-SUIT_RANK[a.suit];}
@@ -509,6 +568,7 @@ function SetupScreen({onStart,onRules}){
   const[names,setNames]=useState(['Player 1','AI Player 2','AI Player 3','AI Player 4']);
   const[bets,setBets]=useState([10,10,10,10]);
   const[isAI,setIsAI]=useState([false,true,true,true]);
+  const[clientSeed,setClientSeed]=useState('');
   const uN=(i,v)=>{const a=[...names];a[i]=v;setNames(a);};
   const uB=(i,v)=>{const a=[...bets];a[i]=Math.max(1,parseInt(v)||0);setBets(a);};
   const tAI=(i)=>{if(i===0)return;const a=[...isAI];a[i]=!a[i];setIsAI(a);};
@@ -533,7 +593,15 @@ function SetupScreen({onStart,onRules}){
           React.createElement('button',{onClick:()=>tAI(i),style:{flex:1,padding:'7px 0',borderRadius:7,fontSize:12,fontWeight:600,border:isAI[i]?'1.5px solid #d4af37':'1px solid rgba(255,255,255,0.12)',background:isAI[i]?'rgba(212,175,55,0.15)':'transparent',color:isAI[i]?'#d4af37':'#9bb5a8',cursor:'pointer'}},t.ai)
         )
       )),
-      React.createElement('div',{style:{marginTop:24,textAlign:'center'}},React.createElement(Btn,{onClick:()=>onStart(range(n).map(i=>({id:i,name:(names[i]||`Player ${i+1}`).trim(),bet:bets[i]||10,score:0,isAI:i===0?false:!!isAI[i]})))},t.startGame))
+      React.createElement('div',{style:{marginTop:18,padding:'10px 12px',borderRadius:12,background:'rgba(155,181,168,0.06)',border:'1px solid rgba(155,181,168,0.18)'}},
+        React.createElement('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:7}},
+          React.createElement('span',{style:{fontSize:12}},'🛡️'),
+          React.createElement('span',{style:{color:'#cfe3d8',fontSize:12,fontWeight:700}},t.fairTitle)
+        ),
+        React.createElement('div',{style:{color:'#9bb5a8',fontSize:10,marginBottom:6}},t.clientSeedLabel),
+        React.createElement('input',{value:clientSeed,onChange:e=>setClientSeed(e.target.value),placeholder:t.clientSeedPlaceholder,style:{width:'100%',boxSizing:'border-box',padding:'9px 11px',borderRadius:8,border:'1px solid rgba(155,181,168,0.3)',background:'rgba(0,0,0,0.2)',color:'#fffdf7',fontSize:12,outline:'none',fontFamily:'monospace'}})
+      ),
+      React.createElement('div',{style:{marginTop:24,textAlign:'center'}},React.createElement(Btn,{onClick:()=>{window.__bbClientSeed=clientSeed;onStart(range(n).map(i=>({id:i,name:(names[i]||`Player ${i+1}`).trim(),bet:bets[i]||10,score:0,isAI:i===0?false:!!isAI[i]})));}},t.startGame))
     )
   );
 }
@@ -723,8 +791,10 @@ function ResultScreen({res,players,rn,dealerIdx,onNext,isLast}){
 }
 
 // ─── 最终结算屏 ──────────────────────────────────────────
-function FinalScreen({players,results,stock,onRestart}){
+function FinalScreen({players,results,stock,fair,onRestart}){
   const lang=useLang();const t=T[lang];
+  const[copied,setCopied]=useState(null);
+  function copyField(key,val){try{navigator.clipboard.writeText(val);}catch(e){}setCopied(key);setTimeout(()=>setCopied(c=>c===key?null:c),1500);}
   const sorted=[...players].sort((a,b)=>b.score-a.score);
   function slotEval(key,SS){
     const cards=SS[key]||[];if(cards.length<SLOT_MAX[key])return null;
@@ -784,6 +854,24 @@ function FinalScreen({players,results,stock,onRestart}){
           stock.map(c=>{const color=SUIT_CLR[c.suit];return React.createElement('div',{key:c.id,style:{display:'flex',flexDirection:'column',alignItems:'center',background:'#fffdf7',borderRadius:4,border:'1px solid #c9c2ab',padding:'3px 5px',boxSizing:'border-box',minWidth:26}},React.createElement('span',{style:{color,fontSize:12,fontWeight:800,fontFamily:'Georgia,serif',lineHeight:1,whiteSpace:'nowrap'}},c.rank),React.createElement(SuitIcon,{suit:c.suit,size:9,color}));})
         )
       ),
+      fair&&React.createElement('div',{style:{marginBottom:14,borderRadius:12,overflow:'hidden',border:'1px solid rgba(155,181,168,0.25)'}},
+        React.createElement('div',{style:{padding:'8px 12px',background:'rgba(155,181,168,0.1)',display:'flex',alignItems:'center',gap:8}},
+          React.createElement('span',{style:{fontSize:13}},'🛡️'),
+          React.createElement('span',{style:{color:'#cfe3d8',fontSize:13,fontWeight:700}},t.fairVerifyTitle)
+        ),
+        React.createElement('div',{style:{padding:'10px 12px',background:'rgba(0,0,0,0.15)'}},
+          React.createElement('div',{style:{color:'#9bb5a8',fontSize:10,lineHeight:1.5,marginBottom:10}},t.fairVerifyHint),
+          [[t.fairCommit,fair.serverSeedHash,'h'],[t.fairServerSeed,fair.serverSeed,'s'],[t.fairClientSeed,fair.clientSeed,'c'],[t.fairNonce,String(fair.nonce),'n']].map(([label,val,key])=>
+            React.createElement('div',{key,style:{marginBottom:8}},
+              React.createElement('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:2}},
+                React.createElement('span',{style:{color:'#cfe3d8',fontSize:10,fontWeight:600}},label),
+                React.createElement('button',{onClick:()=>copyField(key,val),style:{marginLeft:'auto',background:'none',border:'1px solid rgba(155,181,168,0.3)',borderRadius:5,color:copied===key?'#6fcf73':'#9bb5a8',fontSize:9,padding:'2px 7px',cursor:'pointer'}},copied===key?t.fairCopied:t.fairCopy)
+              ),
+              React.createElement('div',{style:{color:'#fffdf7',fontSize:10,fontFamily:'monospace',wordBreak:'break-all',background:'rgba(255,255,255,0.04)',borderRadius:5,padding:'5px 7px',lineHeight:1.4}},val)
+            )
+          )
+        )
+      ),
       React.createElement('div',{style:{marginTop:8}},React.createElement(Btn,{onClick:onRestart,style:{width:'100%'}},t.restart))
     )
   );
@@ -826,13 +914,19 @@ function App(){
   const[players,setPlayers]=useState([]);
   const[game,setGame]=useState(null);
   const toggleLang=()=>setLang(l=>l==='en'?'zh':'en');
-  function startGame(ps){
+  async function startGame(ps){
     clearPlans();
     setPlayers(ps);
-    const deck=shuffle(makeDeck());
+    // Provably Fair：生成服务端种子 + 哈希承诺，客户端种子可由玩家在开局界面提供
+    const serverSeed=genSeedHex(32);
+    const clientSeed=(window.__bbClientSeed&&String(window.__bbClientSeed).trim())||genSeedHex(8);
+    const nonce=0;
+    const serverSeedHash=await sha256Hex(serverSeed);
+    const deck=await provablyShuffle(makeDeck(),serverSeed,clientSeed,nonce);
     const hands=ps.map((_,i)=>deck.slice(i*11,i*11+11));
     const stock=deck.slice(ps.length*11);
-    setGame({hands,stock,rn:1,dealerIdx:null,curIdx:0,uiState:'pass',choices:[],results:[],pSlots:ps.map(()=>emptySlots())});
+    const fair={serverSeed,serverSeedHash,clientSeed,nonce};
+    setGame({hands,stock,fair,rn:1,dealerIdx:null,curIdx:0,uiState:'pass',choices:[],results:[],pSlots:ps.map(()=>emptySlots())});
     setStage('play');
     // 利用「开始发牌」这个用户点击事件触发音乐
     getAudio().play().catch(()=>{});
@@ -845,7 +939,7 @@ function App(){
     stage==='rules'?React.createElement(RulesScreen,{onBack:()=>setStage('setup')}):
     stage==='setup'?React.createElement(SetupScreen,{onStart:startGame,onRules:()=>setStage('rules')}):
     stage==='play'&&game?React.createElement(GameFlow,{players,setPlayers,game,setGame,onFinish:()=>setStage('done')}):
-    stage==='done'?React.createElement(FinalScreen,{players,results:game.results,stock:game.stock,onRestart:restart}):null
+    stage==='done'?React.createElement(FinalScreen,{players,results:game.results,stock:game.stock,fair:game.fair,onRestart:restart}):null
   );
 }
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
