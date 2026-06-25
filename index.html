@@ -39,7 +39,7 @@ const ModeCtx=createContext('niu');
 function useMode(){return useContext(ModeCtx);}
 const T={
   en:{
-    appName:'Bull Battle',appSub:'Banker · High · Low · Sam Kong · Niu Niu',
+    appName:'Bull Battle',appSub:'Banker · High · Low · Sam Kong · Niu Niu',appSubPk:'Banker · High · Low · Sam Kong · Poker',
     rules:'📖 Rules',players:'Players',playerSetup:'Player Setup',
     human:'🧑 Human',ai:'🤖 AI',you:'🧑 You (Player 1)',
     bet:'Bet',startGame:'Deal Cards 🎴',
@@ -75,7 +75,7 @@ const T={
     niuBaobaoAMax:'Twin Aces (Max)',niuBaobaoAMin:'Twin Aces (Min)',
     niuBaobao:'Twin',niu10:'Bull Ten (2x)',niuN:'Bull',noNiu:'No Bull',
     pkRoyal:'Royal Flush',pkStraightFlush:'Straight Flush',pkFourKind:'Four of a Kind',pkFullHouse:'Full House',pkFlush:'Flush',pkStraight:'Straight',pkThreeKind:'Three of a Kind',pkTwoPair:'Two Pair',pkOnePair:'Pair',pkHighCard:'High Card',
-    modeNiu:'🐂 Bull Battle',modePoker:'🃏 Poker Battle',modeLabel:'Game Mode',r5titlePk:'Round 5 · Poker',r5descPk:'Play last 5 cards. Best poker hand wins.',slotPoker:'Poker',appNamePk:'Bull & Poker',
+    modeNiu:'🐂 Bull',modePoker:'🃏 Poker',modeLabel:'Game Mode',r5titlePk:'Round 5 · Poker',r5descPk:'Play last 5 cards. Best poker hand wins.',slotPoker:'Poker',appNamePk:'Bull & Poker',
     triple:'Triple',tenPt:'Ten Points (2x)',pt:'Points',
     rulesSecs:[
       {icon:'👑',title:'Round 1 · Banker',lines:['Each player plays one card to bid or fold.','Highest bid card wins the Banker role.','If no one bids, lowest fold card becomes Banker.','Banker settles with all players independently.']},
@@ -91,7 +91,7 @@ const T={
     ],
   },
   zh:{
-    appName:'大小公牛',appSub:'抢庄 · 斗大 · 斗小 · 三公 · 斗牛',
+    appName:'大小公牛',appSub:'抢庄 · 斗大 · 斗小 · 三公 · 斗牛',appSubPk:'抢庄 · 斗大 · 斗小 · 三公 · 斗扑',
     rules:'📖 规则说明',players:'玩家人数',playerSetup:'玩家设置',
     human:'🧑 真人',ai:'🤖 AI',you:'🧑 真人玩家（你）',
     bet:'注',startGame:'开始发牌 🎴',
@@ -691,7 +691,7 @@ function HomeScreen({state,onProceed,onRules,onShowFair,onReset,onModeChange}){
   return React.createElement(Shell,null,React.createElement(TopControls,{onReset:inited?onReset:null}),
     React.createElement('div',{style:{flex:1,padding:'36px 20px',maxWidth:480,margin:'0 auto',width:'100%',boxSizing:'border-box'}},
       React.createElement('div',{style:{textAlign:'center',marginBottom:24}},
-        React.createElement('div',{style:{fontSize:44}},gmode==='poker'?'🃏🀄':'🐂🀄'),
+        React.createElement('div',{style:{fontSize:44}},gmode==='poker'?'🃏':'🐂'),
         React.createElement('div',{style:{color:'#fffdf7',fontSize:26,fontWeight:700,marginTop:8,fontFamily:'Georgia,serif'}},
           (()=>{const txt=titleTxt;const idx=txt.indexOf('公')>=0?txt.indexOf('公'):Math.min(2,txt.length-1);
             return Array.from(txt).map((ch,i)=>i===idx
@@ -699,7 +699,7 @@ function HomeScreen({state,onProceed,onRules,onShowFair,onReset,onModeChange}){
               :React.createElement('span',{key:i},ch));
           })()
         ),
-        React.createElement('div',{style:{color:'#9bb5a8',fontSize:13,marginTop:4}},t.appSub),
+        React.createElement('div',{style:{color:'#9bb5a8',fontSize:13,marginTop:4}},gmode==='poker'?t.appSubPk:t.appSub),
         React.createElement('button',{onClick:onRules,style:{marginTop:10,background:'none',border:'1px solid rgba(212,175,55,0.35)',borderRadius:999,color:'#d4af37',fontSize:12,padding:'5px 16px',cursor:'pointer'}},t.rules)
       ),
       React.createElement('div',{style:{color:'#d4af37',fontSize:12,marginBottom:8,letterSpacing:1}},t.modeLabel),
