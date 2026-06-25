@@ -76,8 +76,8 @@ const T={
       {icon:'🔺',title:'Round 2 · High Card',lines:['Each player plays one card. Highest wins.','Tie = draw, no points exchanged.','If winning card is an A, bet is doubled.']},
       {icon:'🔻',title:'Round 3 · Low Card',lines:['Each player plays one card. Lowest wins.','Tie = draw, no points exchanged.','If winning card is a 2, bet is doubled.']},
       {icon:'🀄',title:'Round 4 · Sam Kong',lines:['Each player plays 3 cards. J/Q/K=10pts, A=1pt.','Sum the 3 cards, take last digit. Highest wins.','10pts=2x. Triple (3 same rank)=3x. Tie=draw.']},
-      {icon:'🐂',title:'Round 5 · Niu Niu',lines:['Play last 5 cards. 3s and 6s are interchangeable.','Find 3 cards summing to multiple of 10. Remaining 2 determine Bull type.','Bull King > Wild Bull > Twin Aces > Twin K…2 > Bull Ten > Bull 9…1 > No Bull.']},
-      {icon:'🃏',title:'Special Hands',lines:['【Bull King】All 5 are J/Q/K. 10x. Banker wins unconditionally.','【Wild Bull】3 sum to 10x + Spade A + one J/Q/K. 5x.','【Twin Pairs】3 sum to 10x + remaining 2 same rank. 3x.','【Bull Ten】3 sum to 10x + remaining 2 sum to last digit 0. 2x.']},
+      {icon:'🐂',title:'Round 5 · Niu Niu',lines:['Play last 5 cards. 3s and 6s are interchangeable.','Find 3 cards summing to multiple of 10. Remaining 2 determine Bull type.','Bull King > Wild Bull > Twin Aces(Max) > Twin K…2 > Twin Aces(Min) > Bull Ten > Bull 9…1 > No Bull.']},
+      {icon:'🃏',title:'Special Hands',lines:['【Bull King】All 5 are J/Q/K. 10x. Banker wins unconditionally.','【Wild Bull】3 sum to 10x + Spade A + one J/Q/K. 5x.','【Twin Pairs】3 sum to 10x + remaining 2 same rank (a pair). 3x.','　• Pair of Aces WITH Spade A → Twin Aces (Max): highest of all twins.','　• Pair of Aces WITHOUT Spade A → Twin Aces (Min): lowest of all twins.','　• Other pairs (KK…22) → Twin K…Twin 2, ranked by value.','【Bull Ten】3 sum to 10x + remaining 2 sum to last digit 0. 2x.']},
     ],
   },
   zh:{
@@ -121,8 +121,8 @@ const T={
       {icon:'🔺',title:'第二回合 · 斗大',lines:['每人各出一张牌，牌面越大越赢。','点数相同则和局。','若胜负牌中有 A，该局注码双倍。']},
       {icon:'🔻',title:'第三回合 · 斗小',lines:['每人各出一张牌，牌面越小越赢。','点数相同则和局。','若胜负牌中有 2，该局注码双倍。']},
       {icon:'🀄',title:'第四回合 · 三公',lines:['每人出三张牌，J/Q/K算10点，A算1点。','三张之和取个位，越大越赢。10点双倍，豹子三倍。','点数相同则和局。']},
-      {icon:'🐂',title:'第五回合 · 斗牛',lines:['五张牌，3和6可互换点数使用。','找三张之和为10的倍数，剩两张定牛型。','牛魔王>牛冬菇>牛宝宝A>牛宝宝K…2>牛10>牛9…1>没牛。']},
-      {icon:'🃏',title:'特殊牛型',lines:['【牛魔王】五张全JQK，10倍，庄家拿到无条件赢全场。','【牛冬菇】三张凑10倍数+剩两张为黑桃A+一张JQK，5倍。','【牛宝宝】三张凑10倍数+剩两张同点数，3倍。','【牛10】三张凑10倍数+剩两张之和个位为0，2倍。']},
+      {icon:'🐂',title:'第五回合 · 斗牛',lines:['五张牌，3和6可互换点数使用。','找三张之和为10的倍数，剩两张定牛型。','牛魔王>牛冬菇>牛宝宝A>牛宝宝K…2>牛宝宝1>牛10>牛9…1>没牛。']},
+      {icon:'🃏',title:'特殊牛型',lines:['【牛魔王】五张全JQK，10倍，庄家拿到无条件赢全场。','【牛冬菇】三张凑10倍数+剩两张为黑桃A+一张JQK，5倍。','【牛宝宝】三张凑10倍数+剩两张同点数（一对），3倍。','　• 一对A且含黑桃A → 牛宝宝A，所有牛宝宝里最大。','　• 一对A但不含黑桃A → 牛宝宝1，所有牛宝宝里最小。','　• 其余对子（KK…22）→ 牛宝宝K…牛宝宝2，按点数大小排。','【牛10】三张凑10倍数+剩两张之和个位为0，2倍。']},
     ],
   },
 };
