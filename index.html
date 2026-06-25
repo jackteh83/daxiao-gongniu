@@ -571,7 +571,7 @@ function PlanBoard({hand,slots,onChange,currentRn,mode,setMode,onConfirm,confirm
         React.createElement('button',{onClick:()=>setMode(m=>m==='fold'?null:'fold'),style:{flex:1,padding:'9px 0',borderRadius:999,fontWeight:700,fontSize:13,border:mode==='fold'?'2px solid #9bb5a8':'1.5px solid rgba(155,181,168,0.3)',background:mode==='fold'?'rgba(155,181,168,0.15)':'transparent',color:'#9bb5a8',cursor:'pointer'}},t.fold)
       )
     ),
-    React.createElement('div',{style:{padding:'8px 10px 14px',marginTop:'auto'}},React.createElement(Btn,{disabled:confirmDisabled,onClick:onConfirm,style:{width:'100%',padding:'13px 0',fontSize:14}},confirmLabel))
+    React.createElement('div',{style:{padding:'8px 10px 14px',marginTop:'auto'}},React.createElement(Btn,{disabled:confirmDisabled,onClick:onConfirm,style:{width:'100%',padding:'19px 0',fontSize:15}},confirmLabel))
   );
 }
 
