@@ -40,6 +40,7 @@ const T={
     rules:'📖 Rules',players:'Players',playerSetup:'Player Setup',
     human:'🧑 Human',ai:'🤖 AI',you:'🧑 You (Player 1)',
     bet:'Bet',startGame:'Deal Cards 🎴',
+    homeSetup:'Game Setup',initPoints:'Starting Points',initPointsHint:'Enter the starting points for each player',pointsBalance:'Points Balance',toBet:'Next: Place Bets →',startNew:'Start Game',resetBtn:'Reset',resetConfirmTitle:'Reset all points?',resetConfirmBody:'This clears every player\'s points and returns to the starting-points screen. This cannot be undone.',resetConfirmYes:'Yes, Reset',resetConfirmNo:'Cancel',betTitle:'Place Bets',betHint:'Set each player\'s bet for this game',balanceLabel:'Balance',confirmBets:'Deal Cards 🎴',backToHome:'← Back',points:'pts',totalNow:'Total',
     fairTitle:'Provably Fair',clientSeedLabel:'Client Seed (optional)',clientSeedPlaceholder:'Leave blank for auto-random',
     fairCommit:'Server Seed Hash (commitment)',fairServerSeed:'Server Seed (revealed)',fairClientSeed:'Client Seed',fairNonce:'Nonce',
     fairVerifyTitle:'Fairness Verification',fairVerifyHint:'Before the deal, the server seed hash was committed. After the game, verify: SHA-256(server seed) must equal the committed hash, and re-shuffling with these seeds reproduces the exact same deck.',
@@ -85,6 +86,7 @@ const T={
     rules:'📖 规则说明',players:'玩家人数',playerSetup:'玩家设置',
     human:'🧑 真人',ai:'🤖 AI',you:'🧑 真人玩家（你）',
     bet:'注',startGame:'开始发牌 🎴',
+    homeSetup:'游戏设置',initPoints:'初始积分',initPointsHint:'输入每位玩家的初始积分',pointsBalance:'积分余额',toBet:'下一步：设置投注 →',startNew:'开始游戏',resetBtn:'重置',resetConfirmTitle:'重置所有积分？',resetConfirmBody:'将清空所有玩家的积分，并返回初始积分输入界面。此操作无法撤销。',resetConfirmYes:'确定重置',resetConfirmNo:'取消',betTitle:'设置投注',betHint:'设置本局每位玩家的下注额',balanceLabel:'余额',confirmBets:'开始发牌 🎴',backToHome:'← 返回',points:'分',totalNow:'总分',
     fairTitle:'可证明公平',clientSeedLabel:'客户端种子（可选）',clientSeedPlaceholder:'留空则系统自动随机',
     fairCommit:'服务端种子哈希（承诺值）',fairServerSeed:'服务端种子（已揭示）',fairClientSeed:'客户端种子',fairNonce:'局号',
     fairVerifyTitle:'公平性验证',fairVerifyHint:'发牌前已先公布服务端种子的哈希承诺。游戏结束后可验证：对服务端种子做 SHA-256 应等于当初的承诺值；用这些种子重新洗牌，会得到完全相同的牌序。',
@@ -126,6 +128,22 @@ const T={
     ],
   },
 };
+
+// ─── 积分持久化（localStorage，带降级）──────────────────────
+const BB_KEY='bb_points_v1';
+let _memStore=null;// localStorage 不可用时的内存降级
+function loadState(){
+  try{const s=localStorage.getItem(BB_KEY);if(s)return JSON.parse(s);}catch(e){if(_memStore)return _memStore;}
+  return null;
+}
+function saveState(st){
+  _memStore=st;
+  try{localStorage.setItem(BB_KEY,JSON.stringify(st));}catch(e){}
+}
+function clearState(){
+  _memStore=null;
+  try{localStorage.removeItem(BB_KEY);}catch(e){}
+}
 
 // ─── 牌组 ────────────────────────────────────────────────
 const SUITS=['S','H','C','D'];
@@ -476,7 +494,7 @@ function getAudio(){
 }
 
 // ─── 顶部控制栏 ──────────────────────────────────────────
-function TopControls(){
+function TopControls({onReset}){
   const lang=useLang();const toggle=useToggleLang();
   const[playing,setPlaying]=useState(true);
 
@@ -496,6 +514,10 @@ function TopControls(){
   }
 
   return React.createElement('div',{style:{position:'fixed',top:14,right:14,zIndex:9999,display:'flex',gap:8}},
+    onReset&&React.createElement('button',{
+      onClick:onReset,
+      style:{background:'rgba(192,57,43,0.15)',border:'1.5px solid rgba(192,57,43,0.5)',borderRadius:999,color:'#e57373',fontSize:12,fontWeight:700,padding:'6px 13px',cursor:'pointer',backdropFilter:'blur(6px)',boxShadow:'0 2px 8px rgba(0,0,0,0.3)'}
+    },'↺ '+T[lang].resetBtn),
     React.createElement('button',{
       onClick:toggleMusic,
       style:{background:playing?'rgba(212,175,55,0.35)':'rgba(212,175,55,0.18)',border:`1.5px solid ${playing?'#d4af37':'rgba(212,175,55,0.55)'}`,borderRadius:999,color:'#d4af37',fontSize:16,fontWeight:700,padding:'5px 12px',cursor:'pointer',backdropFilter:'blur(6px)',boxShadow:'0 2px 8px rgba(0,0,0,0.3)'}
@@ -576,18 +598,33 @@ function PlanBoard({hand,slots,onChange,currentRn,mode,setMode,onConfirm,confirm
 }
 
 // ─── 设置页 ──────────────────────────────────────────────
-function SetupScreen({onStart,onRules,onShowFair}){
+// ─── 积分主页（人数/AI/初始积分 或 余额）──────────────────
+function HomeScreen({state,onProceed,onRules,onShowFair,onReset}){
   const lang=useLang();const t=T[lang];
-  const[n,setN]=useState(4);
-  const[names,setNames]=useState(['Player 1','AI Player 2','AI Player 3','AI Player 4']);
-  const[bets,setBets]=useState([10,10,10,10]);
-  const[isAI,setIsAI]=useState([false,true,true,true]);
+  const inited=!!(state&&state.inited);
+  const[n,setN]=useState(state?.n||4);
+  const[names,setNames]=useState(state?.names||['Player 1','AI Player 2','AI Player 3','AI Player 4']);
+  const[isAI,setIsAI]=useState(state?.isAI||[false,true,true,true]);
+  const[initPts,setInitPts]=useState(state?.initPts||1000);
   const uN=(i,v)=>{const a=[...names];a[i]=v;setNames(a);};
-  const uB=(i,v)=>{const a=[...bets];a[i]=Math.max(1,parseInt(v)||0);setBets(a);};
   const tAI=(i)=>{if(i===0)return;const a=[...isAI];a[i]=!a[i];setIsAI(a);};
-  return React.createElement(Shell,null,React.createElement(TopControls,null),
+  function setCount(x){setN(x);setNames(p=>range(x).map((_,i)=>p[i]||(i===0?'Player 1':`AI Player ${i+1}`)));setIsAI(p=>range(x).map((_,i)=>i===0?false:(p[i]??true)));}
+  function proceed(){
+    const cleanNames=range(n).map(i=>(names[i]||`Player ${i+1}`).trim());
+    const ai=range(n).map(i=>i===0?false:!!isAI[i]);
+    if(inited){
+      // 已有积分：沿用钱包，进投注页
+      const wallet=range(n).map(i=>(state.wallet&&state.wallet[i]!=null)?state.wallet[i]:initPts);
+      onProceed({inited:true,n,names:cleanNames,isAI:ai,initPts:state.initPts,wallet});
+    }else{
+      // 首次：用初始积分填充钱包
+      const wallet=range(n).map(()=>initPts);
+      onProceed({inited:true,n,names:cleanNames,isAI:ai,initPts,wallet});
+    }
+  }
+  return React.createElement(Shell,null,React.createElement(TopControls,{onReset:inited?onReset:null}),
     React.createElement('div',{style:{flex:1,padding:'36px 20px',maxWidth:480,margin:'0 auto',width:'100%',boxSizing:'border-box'}},
-      React.createElement('div',{style:{textAlign:'center',marginBottom:32}},
+      React.createElement('div',{style:{textAlign:'center',marginBottom:28}},
         React.createElement('div',{style:{fontSize:44}},'🐂🀄'),
         React.createElement('div',{style:{color:'#fffdf7',fontSize:26,fontWeight:700,marginTop:8,fontFamily:'Georgia,serif'}},
           (()=>{const txt=t.appName;const idx=txt.indexOf('公')>=0?txt.indexOf('公'):Math.min(2,txt.length-1);
@@ -600,19 +637,72 @@ function SetupScreen({onStart,onRules,onShowFair}){
         React.createElement('button',{onClick:onRules,style:{marginTop:10,background:'none',border:'1px solid rgba(212,175,55,0.35)',borderRadius:999,color:'#d4af37',fontSize:12,padding:'5px 16px',cursor:'pointer'}},t.rules)
       ),
       React.createElement('div',{style:{color:'#d4af37',fontSize:12,marginBottom:8,letterSpacing:1}},t.players),
-      React.createElement('div',{style:{display:'flex',gap:8,marginBottom:24}},[2,3,4].map(x=>React.createElement('button',{key:x,onClick:()=>{setN(x);setNames(p=>range(x).map((_,i)=>p[i]||(i===0?'Player 1':`AI Player ${i+1}`)));setBets(p=>range(x).map((_,i)=>p[i]||10));setIsAI(p=>range(x).map((_,i)=>i===0?false:(p[i]??true)));},style:{flex:1,padding:'11px 0',borderRadius:10,fontSize:15,fontWeight:700,border:n===x?'2px solid #d4af37':'1px solid rgba(212,175,55,0.25)',background:n===x?'rgba(212,175,55,0.15)':'transparent',color:n===x?'#d4af37':'#9bb5a8',cursor:'pointer'}},x))),
+      React.createElement('div',{style:{display:'flex',gap:8,marginBottom:22}},[2,3,4].map(x=>React.createElement('button',{key:x,onClick:()=>setCount(x),style:{flex:1,padding:'11px 0',borderRadius:10,fontSize:15,fontWeight:700,border:n===x?'2px solid #d4af37':'1px solid rgba(212,175,55,0.25)',background:n===x?'rgba(212,175,55,0.15)':'transparent',color:n===x?'#d4af37':'#9bb5a8',cursor:'pointer'}},x))),
       React.createElement('div',{style:{color:'#d4af37',fontSize:12,marginBottom:8,letterSpacing:1}},t.playerSetup),
       range(n).map(i=>React.createElement('div',{key:i,style:{marginBottom:10,padding:10,borderRadius:12,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(212,175,55,0.12)'}},
-        React.createElement('div',{style:{display:'flex',gap:7,marginBottom:i===0?0:7}},
+        React.createElement('div',{style:{display:'flex',gap:7,alignItems:'center',marginBottom:i===0?0:7}},
           React.createElement('input',{value:names[i]||'',onChange:e=>uN(i,e.target.value),style:{flex:1.4,padding:'10px 12px',borderRadius:8,border:'1px solid rgba(212,175,55,0.25)',background:'rgba(255,255,255,0.05)',color:'#fffdf7',fontSize:14,outline:'none'}}),
-          React.createElement('div',{style:{flex:1,display:'flex',alignItems:'center',gap:5,background:'rgba(255,255,255,0.05)',borderRadius:8,border:'1px solid rgba(212,175,55,0.25)',padding:'0 10px'}},React.createElement('span',{style:{color:'#9bb5a8',fontSize:12}},t.bet),React.createElement('input',{type:'number',value:bets[i]||'',onChange:e=>uB(i,e.target.value),style:{width:'100%',padding:'10px 0',border:'none',background:'transparent',color:'#fffdf7',fontSize:14,outline:'none'}}))
+          inited&&React.createElement('div',{style:{flex:1,textAlign:'right',color:(state.wallet&&state.wallet[i]<0)?'#e57373':'#6fcf73',fontSize:15,fontWeight:700}},`${(state.wallet&&state.wallet[i]!=null?state.wallet[i]:initPts)} ${t.points}`)
         ),
         i===0?React.createElement('div',{style:{color:'#6fcf73',fontSize:11,marginTop:4}},t.you):React.createElement('div',{style:{display:'flex',gap:7}},
           React.createElement('button',{onClick:()=>tAI(i),style:{flex:1,padding:'7px 0',borderRadius:7,fontSize:12,fontWeight:600,border:!isAI[i]?'1.5px solid #6fcf73':'1px solid rgba(255,255,255,0.12)',background:!isAI[i]?'rgba(111,207,115,0.15)':'transparent',color:!isAI[i]?'#6fcf73':'#9bb5a8',cursor:'pointer'}},t.human),
           React.createElement('button',{onClick:()=>tAI(i),style:{flex:1,padding:'7px 0',borderRadius:7,fontSize:12,fontWeight:600,border:isAI[i]?'1.5px solid #d4af37':'1px solid rgba(255,255,255,0.12)',background:isAI[i]?'rgba(212,175,55,0.15)':'transparent',color:isAI[i]?'#d4af37':'#9bb5a8',cursor:'pointer'}},t.ai)
         )
       )),
-      React.createElement('div',{style:{marginTop:24,textAlign:'center'}},React.createElement(Btn,{onClick:()=>{onStart(range(n).map(i=>({id:i,name:(names[i]||`Player ${i+1}`).trim(),bet:bets[i]||10,score:0,isAI:i===0?false:!!isAI[i]})));}},t.startGame))
+      !inited&&React.createElement('div',{style:{marginTop:18,padding:'12px 14px',borderRadius:12,background:'rgba(212,175,55,0.07)',border:'1px solid rgba(212,175,55,0.25)'}},
+        React.createElement('div',{style:{color:'#d4af37',fontSize:13,fontWeight:700,marginBottom:4}},t.initPoints),
+        React.createElement('div',{style:{color:'#9bb5a8',fontSize:10,marginBottom:8}},t.initPointsHint),
+        React.createElement('input',{type:'number',value:initPts,onChange:e=>setInitPts(Math.max(0,parseInt(e.target.value)||0)),style:{width:'100%',boxSizing:'border-box',padding:'12px 14px',borderRadius:8,border:'1px solid rgba(212,175,55,0.35)',background:'rgba(0,0,0,0.2)',color:'#fffdf7',fontSize:18,fontWeight:700,outline:'none',textAlign:'center'}})
+      ),
+      React.createElement('div',{style:{marginTop:22,textAlign:'center'}},React.createElement(Btn,{onClick:proceed,style:{width:'100%'}},inited?t.toBet:t.startNew))
+    )
+  );
+}
+
+// ─── 投注页（第二页）────────────────────────────────────────
+function BetScreen({state,onBack,onStart,onReset}){
+  const lang=useLang();const t=T[lang];
+  const n=state.n;
+  const[bets,setBets]=useState(range(n).map(()=>10));
+  const uB=(i,v)=>{const a=[...bets];a[i]=Math.max(1,parseInt(v)||0);setBets(a);};
+  function start(){
+    onStart(range(n).map(i=>({id:i,name:state.names[i],bet:bets[i]||10,score:0,isAI:state.isAI[i],wallet:state.wallet[i]})));
+  }
+  return React.createElement(Shell,null,React.createElement(TopControls,{onReset}),
+    React.createElement('div',{style:{flex:1,padding:'36px 20px',maxWidth:480,margin:'0 auto',width:'100%',boxSizing:'border-box'}},
+      React.createElement('button',{onClick:onBack,style:{background:'none',border:'none',color:'#9bb5a8',fontSize:13,cursor:'pointer',marginBottom:10,padding:0}},t.backToHome),
+      React.createElement('div',{style:{textAlign:'center',marginBottom:24}},
+        React.createElement('div',{style:{fontSize:36}},'🎯'),
+        React.createElement('div',{style:{color:'#d4af37',fontSize:20,fontWeight:700,marginTop:6}},t.betTitle),
+        React.createElement('div',{style:{color:'#9bb5a8',fontSize:12,marginTop:4}},t.betHint)
+      ),
+      range(n).map(i=>React.createElement('div',{key:i,style:{marginBottom:10,padding:'12px 14px',borderRadius:12,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(212,175,55,0.12)'}},
+        React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}},
+          React.createElement('span',{style:{color:'#fffdf7',fontSize:14,fontWeight:700}},state.names[i]),
+          React.createElement('span',{style:{color:state.wallet[i]<0?'#e57373':'#6fcf73',fontSize:12,fontWeight:600}},`${t.balanceLabel}: ${state.wallet[i]} ${t.points}`)
+        ),
+        React.createElement('div',{style:{display:'flex',alignItems:'center',gap:8,background:'rgba(0,0,0,0.2)',borderRadius:8,border:'1px solid rgba(212,175,55,0.25)',padding:'0 12px'}},
+          React.createElement('span',{style:{color:'#9bb5a8',fontSize:13}},t.bet),
+          React.createElement('input',{type:'number',value:bets[i]||'',onChange:e=>uB(i,e.target.value),style:{width:'100%',padding:'11px 0',border:'none',background:'transparent',color:'#fffdf7',fontSize:15,fontWeight:600,outline:'none'}})
+        )
+      )),
+      React.createElement('div',{style:{marginTop:22,textAlign:'center'}},React.createElement(Btn,{onClick:start,style:{width:'100%'}},t.confirmBets))
+    )
+  );
+}
+
+// ─── 重置确认浮层 ─────────────────────────────────────────
+function ResetConfirm({onYes,onNo}){
+  const lang=useLang();const t=T[lang];
+  return React.createElement('div',{onClick:onNo,style:{position:'fixed',inset:0,background:'rgba(0,0,0,0.72)',zIndex:10000,display:'flex',alignItems:'center',justifyContent:'center',padding:24}},
+    React.createElement('div',{onClick:e=>e.stopPropagation(),style:{maxWidth:360,width:'100%',background:'#0f1f17',borderRadius:16,border:'1px solid rgba(192,57,43,0.3)',padding:22,boxSizing:'border-box'}},
+      React.createElement('div',{style:{fontSize:34,textAlign:'center',marginBottom:10}},'⚠️'),
+      React.createElement('div',{style:{color:'#fffdf7',fontSize:17,fontWeight:700,textAlign:'center',marginBottom:8}},t.resetConfirmTitle),
+      React.createElement('div',{style:{color:'#9bb5a8',fontSize:12,lineHeight:1.6,textAlign:'center',marginBottom:20}},t.resetConfirmBody),
+      React.createElement('div',{style:{display:'flex',gap:10}},
+        React.createElement('button',{onClick:onNo,style:{flex:1,padding:'12px 0',borderRadius:10,fontSize:14,fontWeight:700,border:'1px solid rgba(155,181,168,0.3)',background:'transparent',color:'#cfe3d8',cursor:'pointer'}},t.resetConfirmNo),
+        React.createElement('button',{onClick:onYes,style:{flex:1,padding:'12px 0',borderRadius:10,fontSize:14,fontWeight:700,border:'1px solid rgba(192,57,43,0.5)',background:'rgba(192,57,43,0.2)',color:'#e57373',cursor:'pointer'}},t.resetConfirmYes)
+      )
     )
   );
 }
@@ -833,7 +923,10 @@ function FinalScreen({players,results,stock,onRestart}){
       React.createElement('div',{style:{marginBottom:24}},
         sorted.map((p,i)=>React.createElement('div',{key:p.id,style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 14px',borderRadius:10,marginBottom:7,background:i===0?'linear-gradient(135deg,rgba(212,175,55,0.2),rgba(212,175,55,0.04))':'rgba(255,255,255,0.04)',border:i===0?'1px solid rgba(212,175,55,0.4)':'1px solid rgba(255,255,255,0.07)'}},
           React.createElement('div',{style:{display:'flex',alignItems:'center',gap:9}},React.createElement('span',{style:{fontSize:17}},i===0?'🥇':i===1?'🥈':i===2?'🥉':'🎴'),React.createElement('span',{style:{color:'#fffdf7',fontSize:15,fontWeight:700}},p.name)),
-          React.createElement('span',{style:{color:p.score>=0?'#6fcf73':'#e57373',fontWeight:800,fontSize:18}},`${p.score>=0?'+':''}${p.score}`)
+          React.createElement('div',{style:{textAlign:'right'}},
+            React.createElement('div',{style:{color:p.score>=0?'#6fcf73':'#e57373',fontWeight:800,fontSize:18}},`${p.score>=0?'+':''}${p.score}`),
+            (p.wallet!=null)&&React.createElement('div',{style:{color:'#c9bfa0',fontSize:11,marginTop:1}},`${t.totalNow} ${p.wallet+p.score} ${t.points}`)
+          )
         ))
       ),
       React.createElement('div',{style:{color:'#d4af37',fontSize:11,letterSpacing:1,marginBottom:10}},`── ${t.planArea} ──`),
@@ -951,12 +1044,16 @@ function FairModal({fair,onClose}){
 // ─── 主 App ──────────────────────────────────────────────
 function App(){
   const[lang,setLang]=useState('en');
-  const[stage,setStage]=useState('setup');
+  const[pstate,setPstate]=useState(()=>loadState());// 持久积分状态
+  const[stage,setStage]=useState('home');
   const[players,setPlayers]=useState([]);
   const[game,setGame]=useState(null);
   const[lastFair,setLastFair]=useState(null);// 留存最近一局公平性数据，供隐蔽入口查看
   const[showFair,setShowFair]=useState(false);// 公平性浮层开关
+  const[askReset,setAskReset]=useState(false);// 重置确认浮层
   const toggleLang=()=>setLang(l=>l==='en'?'zh':'en');
+  // HomeScreen 完成：保存持久状态，进投注页
+  function proceedFromHome(st){setPstate(st);saveState(st);setStage('bet');}
   async function startGame(ps){
     clearPlans();
     setPlayers(ps);
@@ -975,16 +1072,23 @@ function App(){
     // 利用「开始发牌」这个用户点击事件触发音乐
     getAudio().play().catch(()=>{});
   }
-  function restart(){
+  // 一局结束 → 把本局盈亏累加进钱包，存盘，回投注页
+  function finishGame(finalPlayers){
     if(audioRef.current){audioRef.current.pause();audioRef.current=null;}
-    setStage('setup');setGame(null);
+    const newWallet=pstate.wallet.map((w,i)=>{const p=finalPlayers[i];return w+(p?p.score:0);});
+    const ns={...pstate,wallet:newWallet};
+    setPstate(ns);saveState(ns);setGame(null);setStage('bet');
   }
+  // 重置：清空积分，回初始积分输入界面
+  function doReset(){clearState();setPstate(null);setGame(null);setAskReset(false);setStage('home');}
   return React.createElement(LangCtx.Provider,{value:{lang,toggleLang}},
-    stage==='rules'?React.createElement(RulesScreen,{onBack:()=>setStage('setup')}):
-    stage==='setup'?React.createElement(SetupScreen,{onStart:startGame,onRules:()=>setStage('rules'),onShowFair:()=>setShowFair(true)}):
+    stage==='rules'?React.createElement(RulesScreen,{onBack:()=>setStage('home')}):
+    stage==='home'?React.createElement(HomeScreen,{state:pstate,onProceed:proceedFromHome,onRules:()=>setStage('rules'),onShowFair:()=>setShowFair(true),onReset:()=>setAskReset(true)}):
+    stage==='bet'&&pstate?React.createElement(BetScreen,{state:pstate,onBack:()=>setStage('home'),onStart:startGame,onReset:()=>setAskReset(true)}):
     stage==='play'&&game?React.createElement(GameFlow,{players,setPlayers,game,setGame,onFinish:()=>setStage('done')}):
-    stage==='done'?React.createElement(FinalScreen,{players,results:game.results,stock:game.stock,onRestart:restart}):null,
-    showFair&&React.createElement(FairModal,{fair:lastFair,onClose:()=>setShowFair(false)})
+    stage==='done'?React.createElement(FinalScreen,{players,results:game.results,stock:game.stock,onRestart:()=>finishGame(players)}):null,
+    showFair&&React.createElement(FairModal,{fair:lastFair,onClose:()=>setShowFair(false)}),
+    askReset&&React.createElement(ResetConfirm,{onYes:doReset,onNo:()=>setAskReset(false)})
   );
 }
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
