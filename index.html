@@ -54,7 +54,7 @@ const T={
     confirm:'Confirm',confirmBid:'Bid Banker',confirmFold:'Fold',
     pleaseSelect:'(Select action)',confirmPlay:'Confirm Play ✓',
     dealer:'Banker',thinking:'Thinking',aiDeciding:'AI is deciding...',
-    passTo:'Pass phone to',iam:'I am',view:'View →',
+    passTo:'Pass phone to',iam:'I am',view:'View →',autoNext:'AI is taking over…',
     round:'Round',dealer2:'(Banker)',
     bidResult:'👑 Someone bid — highest card becomes Banker',
     foldResult:'🎲 No bids — lowest fold becomes Banker',
@@ -99,7 +99,7 @@ const T={
     confirm:'确认',confirmBid:'抢庄',confirmFold:'弃牌',
     pleaseSelect:'（请选择方式）',confirmPlay:'确认出牌 ✓',
     dealer:'庄家',thinking:'思考中',aiDeciding:'AI 正在决策',
-    passTo:'请把手机交给',iam:'我是',view:'查看 →',
+    passTo:'请把手机交给',iam:'我是',view:'查看 →',autoNext:'AI 自动接管中…',
     round:'第',dealer2:'（庄家）',
     bidResult:'👑 有人抢庄，牌面最大者当庄',
     foldResult:'🎲 无人抢庄，弃牌最小者当庄',
@@ -635,15 +635,23 @@ function RulesScreen({onBack}){
 }
 
 // ─── Pass / AI / Human 屏 ────────────────────────────────
-function PassScreen({name,sub,onReveal}){
+function PassScreen({name,sub,onReveal,auto}){
   const lang=useLang();const t=T[lang];
+  const revealRef=useRef(onReveal);revealRef.current=onReveal;
+  useEffect(()=>{
+    if(!auto)return;
+    const timer=setTimeout(()=>{revealRef.current&&revealRef.current();},2000);
+    return()=>clearTimeout(timer);
+  },[auto]);
   return React.createElement(Shell,null,React.createElement(TopControls,null),
     React.createElement('div',{style:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}},
-      React.createElement('div',{style:{fontSize:50,marginBottom:12}},'🤚'),
+      React.createElement('div',{style:{fontSize:50,marginBottom:12}},auto?'🤖':'🤚'),
       React.createElement('div',{style:{color:'#9bb5a8',fontSize:12,letterSpacing:3,marginBottom:8,textTransform:'uppercase'}},t.passTo),
       React.createElement('div',{style:{color:'#fffdf7',fontSize:32,fontWeight:700,marginBottom:12,fontFamily:'Georgia,serif'}},name),
       sub&&React.createElement('div',{style:{color:'#c9bfa0',fontSize:13,marginBottom:32,textAlign:'center',maxWidth:260,lineHeight:1.6}},sub),
-      React.createElement(Btn,{onClick:onReveal},`${t.iam} ${name}，${t.view}`)
+      auto
+        ?React.createElement('div',{style:{color:'#d4af37',fontSize:14,fontWeight:600,opacity:0.85}},t.autoNext)
+        :React.createElement(Btn,{onClick:onReveal},`${t.iam} ${name}，${t.view}`)
     )
   );
 }
@@ -890,7 +898,7 @@ function GameFlow({players,setPlayers,game,setGame,onFinish}){
   function next(){if(rn>=5){onFinish();return;}setGame({...game,rn:rn+1,curIdx:0,choices:[],uiState:'pass'});}
   function updateSlots(pidx,s){const ps=[...pSlots];ps[pidx]=safeSlots(s);setGame({...game,pSlots:ps});}
   if(uiState==='result'){const res=game.results[game.results.length-1];return React.createElement(ResultScreen,{res,players,rn,dealerIdx:game.dealerIdx,onNext:next,isLast:rn>=5});}
-  if(uiState==='pass'){const dealer=curIdx===game.dealerIdx;let sub=`${lang==='en'?'Round':t.round} ${rn}`;if(rn>=2&&dealer)sub+=` ${t.dealer2}`;return React.createElement(PassScreen,{name:cur.name+(cur.isAI?' (AI)':''),sub,onReveal:()=>setGame({...game,uiState:'reveal'})});}
+  if(uiState==='pass'){const dealer=curIdx===game.dealerIdx;let sub=`${lang==='en'?'Round':t.round} ${rn}`;if(rn>=2&&dealer)sub+=` ${t.dealer2}`;return React.createElement(PassScreen,{name:cur.name+(cur.isAI?' (AI)':''),sub,auto:cur.isAI,onReveal:()=>setGame({...game,uiState:'reveal'})});}
   if(uiState==='reveal'){
     if(cur.isAI)return React.createElement(AIScreen,{player:cur,hand:hands[curIdx],rn,isDealer:curIdx===game.dealerIdx,pidx:curIdx,nPlayers:n,onDone:submit});
     return React.createElement(HumanScreen,{player:cur,hand:hands[curIdx],rn,isDealer:curIdx===game.dealerIdx,slots:pSlots[curIdx],onSlots:s=>updateSlots(curIdx,s),onSubmit:submit});
