@@ -45,7 +45,7 @@ const T={
     currentScore:'Current Score',nextRound:'Next Round →',finalResult:'Final Results 🏆',
     tie:'Tie',
     finalTitle:'Final Results',finalSub:'Bull Battle',
-    planArea:'Player Plans',restart:'Play Again 🔄',
+    planArea:'Player Plans',restart:'Play Again 🔄',stockArea:'Stock (Undealt)',stockHint:'8 cards never dealt — 52 in total',
     slotBid:'Banker',slotHigh:'High',slotLow:'Low',slotSK:'Sam Kong',slotNiu:'Niu Niu',
     dragHint:'Drag or tap cards into slots',selectedHint:'Selected',tapSlot:'tap slot to place',cancel:'✕ Cancel',
     handLabel:'Hand',unplanned:'unplanned',allPlanned:'All cards planned ✓',
@@ -85,7 +85,7 @@ const T={
     currentScore:'当前积分',nextRound:'进入下一回合 →',finalResult:'查看最终结算 🏆',
     tie:'和局',
     finalTitle:'最终战绩',finalSub:'大小公牛',
-    planArea:'玩家规划区',restart:'再来一局 🔄',
+    planArea:'玩家规划区',restart:'再来一局 🔄',stockArea:'底牌（未发出）',stockHint:'未发出的 8 张 · 全副 52 张',
     slotBid:'抢庄',slotHigh:'斗大',slotLow:'斗小',slotSK:'三公',slotNiu:'斗牛',
     dragHint:'拖拽或点选牌放入槽位',selectedHint:'已选',tapSlot:'点槽位放入',cancel:'✕ 取消',
     handLabel:'手牌',unplanned:'张未规划',allPlanned:'所有牌已规划完毕 ✓',
@@ -723,7 +723,7 @@ function ResultScreen({res,players,rn,dealerIdx,onNext,isLast}){
 }
 
 // ─── 最终结算屏 ──────────────────────────────────────────
-function FinalScreen({players,results,onRestart}){
+function FinalScreen({players,results,stock,onRestart}){
   const lang=useLang();const t=T[lang];
   const sorted=[...players].sort((a,b)=>b.score-a.score);
   function slotEval(key,SS){
@@ -774,6 +774,16 @@ function FinalScreen({players,results,onRestart}){
           )
         );
       }),
+      (stock&&stock.length>0)&&React.createElement('div',{style:{marginBottom:14,borderRadius:12,overflow:'hidden',border:'1px solid rgba(155,181,168,0.25)'}},
+        React.createElement('div',{style:{padding:'8px 12px',background:'rgba(155,181,168,0.1)',display:'flex',alignItems:'center',gap:8}},
+          React.createElement('span',{style:{fontSize:13}},'🂠'),
+          React.createElement('span',{style:{color:'#cfe3d8',fontSize:13,fontWeight:700}},t.stockArea),
+          React.createElement('span',{style:{marginLeft:'auto',color:'#9bb5a8',fontSize:10}},t.stockHint)
+        ),
+        React.createElement('div',{style:{padding:'10px',background:'rgba(0,0,0,0.15)',display:'flex',gap:4,flexWrap:'wrap',justifyContent:'center'}},
+          stock.map(c=>{const color=SUIT_CLR[c.suit];return React.createElement('div',{key:c.id,style:{display:'flex',flexDirection:'column',alignItems:'center',background:'#fffdf7',borderRadius:4,border:'1px solid #c9c2ab',padding:'3px 5px',boxSizing:'border-box',minWidth:26}},React.createElement('span',{style:{color,fontSize:12,fontWeight:800,fontFamily:'Georgia,serif',lineHeight:1,whiteSpace:'nowrap'}},c.rank),React.createElement(SuitIcon,{suit:c.suit,size:9,color}));})
+        )
+      ),
       React.createElement('div',{style:{marginTop:8}},React.createElement(Btn,{onClick:onRestart,style:{width:'100%'}},t.restart))
     )
   );
@@ -821,7 +831,8 @@ function App(){
     setPlayers(ps);
     const deck=shuffle(makeDeck());
     const hands=ps.map((_,i)=>deck.slice(i*11,i*11+11));
-    setGame({hands,rn:1,dealerIdx:null,curIdx:0,uiState:'pass',choices:[],results:[],pSlots:ps.map(()=>emptySlots())});
+    const stock=deck.slice(ps.length*11);
+    setGame({hands,stock,rn:1,dealerIdx:null,curIdx:0,uiState:'pass',choices:[],results:[],pSlots:ps.map(()=>emptySlots())});
     setStage('play');
     // 利用「开始发牌」这个用户点击事件触发音乐
     getAudio().play().catch(()=>{});
@@ -834,7 +845,7 @@ function App(){
     stage==='rules'?React.createElement(RulesScreen,{onBack:()=>setStage('setup')}):
     stage==='setup'?React.createElement(SetupScreen,{onStart:startGame,onRules:()=>setStage('rules')}):
     stage==='play'&&game?React.createElement(GameFlow,{players,setPlayers,game,setGame,onFinish:()=>setStage('done')}):
-    stage==='done'?React.createElement(FinalScreen,{players,results:game.results,onRestart:restart}):null
+    stage==='done'?React.createElement(FinalScreen,{players,results:game.results,stock:game.stock,onRestart:restart}):null
   );
 }
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
