@@ -37,22 +37,6 @@ function useToggleLang(){return useContext(LangCtx).toggleLang;}
 // ─── 游戏模式（'niu' 斗牛 / 'poker' 斗扑）──────────────────
 const ModeCtx=createContext('niu');
 function useMode(){return useContext(ModeCtx);}
-
-// ─── 视口检测（横/竖屏 + 尺寸）──────────────────────────────
-function useViewport(){
-  const[vp,setVp]=useState(()=>({w:window.innerWidth,h:window.innerHeight,landscape:window.innerWidth>=window.innerHeight}));
-  useEffect(()=>{
-    let raf=null;
-    const onResize=()=>{
-      if(raf)cancelAnimationFrame(raf);
-      raf=requestAnimationFrame(()=>setVp({w:window.innerWidth,h:window.innerHeight,landscape:window.innerWidth>=window.innerHeight}));
-    };
-    window.addEventListener('resize',onResize);
-    window.addEventListener('orientationchange',onResize);
-    return()=>{window.removeEventListener('resize',onResize);window.removeEventListener('orientationchange',onResize);if(raf)cancelAnimationFrame(raf);};
-  },[]);
-  return vp;
-}
 const T={
   en:{
     appName:'Bull Battle',appSub:'Banker · High · Low · Sam Kong · Niu Niu',appSubPk:'Banker · High · Low · Sam Kong · Poker',
@@ -535,15 +519,14 @@ function Card({card,size='md',selected=false,dimmed=false,onClick,draggable=fals
   );
 }
 
-function MiniCard({card,selected=false,onClick,draggable=false,onDragStart,onDragEnd,w=30,h=42}){
+function MiniCard({card,selected=false,onClick,draggable=false,onDragStart,onDragEnd}){
   const color=SUIT_CLR[card.suit];
   const isRed=color==='#c0392b';
-  const rf=Math.round(w*0.37);// 字号随卡宽缩放
   return React.createElement('div',{
     onClick,draggable,onDragStart,onDragEnd,
     style:{
       display:'inline-flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-      width:w,height:h,borderRadius:Math.max(4,Math.round(w*0.16)),flexShrink:0,
+      width:30,height:42,borderRadius:5,flexShrink:0,
       background:selected?'#fffbe6':'linear-gradient(145deg,#ffffff,#f8f4ee)',
       border:selected?'2px solid #d4af37':'1.5px solid #ccc5b5',
       boxShadow:selected?'0 3px 10px rgba(212,175,55,0.5)':'0 1px 4px rgba(0,0,0,0.2)',
@@ -553,8 +536,8 @@ function MiniCard({card,selected=false,onClick,draggable=false,onDragStart,onDra
       userSelect:'none',boxSizing:'border-box',gap:1,
     }
   },
-    React.createElement('span',{style:{color,fontSize:rf,fontWeight:900,fontFamily:'Georgia,serif',lineHeight:1}},card.rank),
-    React.createElement(SuitIcon,{suit:card.suit,size:Math.round(rf*0.8),color})
+    React.createElement('span',{style:{color,fontSize:11,fontWeight:900,fontFamily:'Georgia,serif',lineHeight:1}},card.rank),
+    React.createElement(SuitIcon,{suit:card.suit,size:9,color})
   );
 }
 function Btn({children,onClick,disabled,variant='gold',style:st}){
@@ -619,14 +602,7 @@ function TopBar({rn}){
 
 // ─── 规划板 ──────────────────────────────────────────────
 function PlanBoard({hand,slots,onChange,currentRn,mode,setMode,onConfirm,confirmDisabled,confirmLabel}){
-  const lang=useLang();const t=T[lang];const gameMode=useMode();const vp=useViewport();
-  // 横屏时手牌放大：让 11 张牌（含间距）刚好撑满屏幕宽度（首张贴左、末张贴右）
-  const handCard=(()=>{
-    if(!vp.landscape)return{w:30,h:42};// 竖屏保持默认（竖屏靠双指缩放查看）
-    const gap=6,pad=24,N=11;
-    const w=Math.max(30,Math.min(72,Math.floor((vp.w-pad-gap*(N-1))/N)));
-    return{w,h:Math.round(w*1.4)};
-  })();
+  const lang=useLang();const t=T[lang];const gameMode=useMode();
   const[sel,setSel]=useState(null);const[dragSrc,setDragSrc]=useState(null);const[over,setOver]=useState(null);
   const SS=safeSlots(slots);
   const slottedIds=new Set(Object.values(SS).flat().map(c=>c.id));
@@ -670,8 +646,8 @@ function PlanBoard({hand,slots,onChange,currentRn,mode,setMode,onConfirm,confirm
     ),
     React.createElement('div',{style:{padding:'0 10px 4px'}},
       React.createElement('div',{style:{color:'#9bb5a8',fontSize:9,letterSpacing:1,marginBottom:4}},`${t.handLabel} — ${unslotted.length} ${t.unplanned}`),
-      React.createElement('div',{onDragOver:e=>{e.preventDefault();setOver('hand');},onDragLeave:()=>setOver(null),onDrop:()=>onDrop('hand'),style:{display:'flex',flexWrap:vp.landscape?'nowrap':'wrap',justifyContent:vp.landscape?'space-between':'flex-start',gap:6,padding:6,borderRadius:9,minHeight:48,border:`1.5px dashed ${over==='hand'?'rgba(212,175,55,0.4)':'rgba(255,255,255,0.08)'}`,background:over==='hand'?'rgba(212,175,55,0.05)':'transparent'}},
-        unslotted.map(card=>React.createElement(MiniCard,{key:card.id,card,selected:sel?.id===card.id,onClick:()=>clickUnslotted(card),draggable:true,onDragStart:()=>onDS(card,'hand'),onDragEnd:onDE,w:handCard.w,h:handCard.h})),
+      React.createElement('div',{onDragOver:e=>{e.preventDefault();setOver('hand');},onDragLeave:()=>setOver(null),onDrop:()=>onDrop('hand'),style:{display:'flex',flexWrap:'wrap',gap:6,padding:6,borderRadius:9,minHeight:48,border:`1.5px dashed ${over==='hand'?'rgba(212,175,55,0.4)':'rgba(255,255,255,0.08)'}`,background:over==='hand'?'rgba(212,175,55,0.05)':'transparent'}},
+        unslotted.map(card=>React.createElement(MiniCard,{key:card.id,card,selected:sel?.id===card.id,onClick:()=>clickUnslotted(card),draggable:true,onDragStart:()=>onDS(card,'hand'),onDragEnd:onDE})),
         unslotted.length===0&&React.createElement('div',{style:{color:'rgba(255,255,255,0.12)',fontSize:11,padding:'8px 4px'}},t.allPlanned)
       )
     ),
@@ -1151,56 +1127,6 @@ function FairModal({fair,onClose}){
   );
 }
 
-// ─── 竖屏双指缩放 / 拖动容器 ───────────────────────────────
-// 横屏：不启用（内容已自适应一屏）。竖屏：双指捏合缩放 + 双指拖动平移；
-// 单指完全穿透给游戏操作（点牌、拖牌），互不干扰。
-function PinchZoom({enabled,children}){
-  const[t,setT]=useState({s:1,x:0,y:0});
-  const ptrs=useRef(new Map());
-  const start=useRef(null);
-  function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
-  function mid(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2};}
-  function onDown(e){
-    if(!enabled)return;
-    ptrs.current.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(ptrs.current.size===2){
-      const[a,b]=[...ptrs.current.values()];
-      start.current={d:dist(a,b),m:mid(a,b),t:{...t}};
-      e.currentTarget.setPointerCapture&&e.currentTarget.setPointerCapture(e.pointerId);
-    }
-  }
-  function onMove(e){
-    if(!enabled)return;
-    if(!ptrs.current.has(e.pointerId))return;
-    ptrs.current.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(ptrs.current.size===2&&start.current){
-      e.preventDefault();
-      const[a,b]=[...ptrs.current.values()];
-      const nd=dist(a,b),nm=mid(a,b);
-      const ratio=nd/start.current.d;
-      const ns=Math.max(1,Math.min(3,start.current.t.s*ratio));
-      const nx=start.current.t.x+(nm.x-start.current.m.x);
-      const ny=start.current.t.y+(nm.y-start.current.m.y);
-      setT({s:ns,x:nx,y:ny});
-    }
-  }
-  function onUp(e){
-    if(!enabled)return;
-    ptrs.current.delete(e.pointerId);
-    if(ptrs.current.size<2)start.current=null;
-    // 缩放回到 1 时复位平移
-    if(ptrs.current.size===0&&t.s<=1.01&&(t.x!==0||t.y!==0))setT({s:1,x:0,y:0});
-  }
-  // 横屏或未启用：直接渲染，零包裹零干扰
-  if(!enabled)return children;
-  return React.createElement('div',{
-    onPointerDown:onDown,onPointerMove:onMove,onPointerUp:onUp,onPointerCancel:onUp,
-    style:{touchAction:t.s>1?'none':'auto',width:'100%',minHeight:'100vh'}
-  },
-    React.createElement('div',{style:{transform:`translate(${t.x}px,${t.y}px) scale(${t.s})`,transformOrigin:'0 0',transition:start.current?'none':'transform .15s'}},children)
-  );
-}
-
 // ─── 主 App ──────────────────────────────────────────────
 function App(){
   const[lang,setLang]=useState('en');
@@ -1243,16 +1169,13 @@ function App(){
   // 重置：清空积分，回初始积分输入界面
   function doReset(){clearState();setPstate(null);setGame(null);setAskReset(false);setStage('home');}
   const curMode=(pstate&&pstate.mode)||viewMode;
-  const vp=useViewport();
   return React.createElement(LangCtx.Provider,{value:{lang,toggleLang}},
     React.createElement(ModeCtx.Provider,{value:curMode},
-      React.createElement(PinchZoom,{enabled:!vp.landscape},
-        stage==='rules'?React.createElement(RulesScreen,{onBack:()=>setStage('home')}):
-        stage==='home'?React.createElement(HomeScreen,{state:pstate,onProceed:proceedFromHome,onRules:()=>setStage('rules'),onShowFair:()=>setShowFair(true),onReset:()=>setAskReset(true),onModeChange:setViewMode}):
-        stage==='bet'&&pstate?React.createElement(BetScreen,{state:pstate,onBack:()=>setStage('home'),onStart:startGame,onReset:()=>setAskReset(true)}):
-        stage==='play'&&game?React.createElement(GameFlow,{players,setPlayers,game,setGame,onFinish:()=>setStage('done')}):
-        stage==='done'?React.createElement(FinalScreen,{players,results:game.results,stock:game.stock,onRestart:()=>finishGame(players)}):null
-      ),
+      stage==='rules'?React.createElement(RulesScreen,{onBack:()=>setStage('home')}):
+      stage==='home'?React.createElement(HomeScreen,{state:pstate,onProceed:proceedFromHome,onRules:()=>setStage('rules'),onShowFair:()=>setShowFair(true),onReset:()=>setAskReset(true),onModeChange:setViewMode}):
+      stage==='bet'&&pstate?React.createElement(BetScreen,{state:pstate,onBack:()=>setStage('home'),onStart:startGame,onReset:()=>setAskReset(true)}):
+      stage==='play'&&game?React.createElement(GameFlow,{players,setPlayers,game,setGame,onFinish:()=>setStage('done')}):
+      stage==='done'?React.createElement(FinalScreen,{players,results:game.results,stock:game.stock,onRestart:()=>finishGame(players)}):null,
       showFair&&React.createElement(FairModal,{fair:lastFair,onClose:()=>setShowFair(false)}),
       askReset&&React.createElement(ResetConfirm,{onYes:doReset,onNo:()=>setAskReset(false)})
     )
