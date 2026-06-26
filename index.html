@@ -542,7 +542,7 @@ function MiniCard({card,selected=false,onClick,draggable=false,onDragStart,onDra
 }
 function Btn({children,onClick,disabled,variant='gold',style:st}){
   const V={gold:{background:'linear-gradient(135deg,#d4af37,#b8932c)',color:'#1a1a0a',border:'none',boxShadow:'0 4px 16px rgba(212,175,55,0.3)'},ghost:{background:'transparent',color:'#d4af37',border:'1.5px solid #d4af37'},muted:{background:'transparent',color:'#9bb5a8',border:'1.5px solid rgba(155,181,168,0.4)'}};
-  return React.createElement('button',{onClick:disabled?undefined:onClick,style:{padding:'12px 28px',borderRadius:999,fontWeight:700,fontSize:15,cursor:disabled?'not-allowed':'pointer',opacity:disabled?.4:1,...V[variant],...st}},children);
+  return React.createElement('button',{onClick:disabled?undefined:(e)=>{playSfx('click');onClick&&onClick(e);},style:{padding:'12px 28px',borderRadius:999,fontWeight:700,fontSize:15,cursor:disabled?'not-allowed':'pointer',opacity:disabled?.4:1,...V[variant],...st}},children);
 }
 function Shell({children}){return React.createElement('div',{className:'bb-bg',style:{minHeight:'100vh',display:'flex',flexDirection:'column',fontFamily:'"PingFang SC","Microsoft YaHei",system-ui,sans-serif'}},children);}
 
@@ -557,12 +557,39 @@ function getAudio(){
   return audioRef.current;
 }
 
+// ─── 音效系统（Web Audio 合成，无需文件）──────────────────
+const sfxState={on:true};
+let _actx=null;
+function getCtx(){
+  if(!_actx){try{_actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){_actx=null;}}
+  return _actx;
+}
+// 播放一个短促音效。type: 'tap'（点牌/普通按钮）| 'click'（确认类按钮）
+function playSfx(type='tap'){
+  if(!sfxState.on)return;
+  const ctx=getCtx();if(!ctx)return;
+  try{
+    if(ctx.state==='suspended')ctx.resume();
+    const o=ctx.createOscillator(),g=ctx.createGain();
+    const now=ctx.currentTime;
+    if(type==='click'){o.type='triangle';o.frequency.setValueAtTime(660,now);o.frequency.exponentialRampToValueAtTime(880,now+0.08);}
+    else{o.type='sine';o.frequency.setValueAtTime(520,now);o.frequency.exponentialRampToValueAtTime(720,now+0.05);}
+    g.gain.setValueAtTime(0.0001,now);
+    g.gain.exponentialRampToValueAtTime(0.18,now+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001,now+0.13);
+    o.connect(g);g.connect(ctx.destination);
+    o.start(now);o.stop(now+0.14);
+  }catch(e){}
+}
+
 // ─── 顶部控制栏 ──────────────────────────────────────────
 function TopControls({onReset}){
   const lang=useLang();const toggle=useToggleLang();
   const[playing,setPlaying]=useState(true);
+  const[sfxOn,setSfxOn]=useState(sfxState.on);
 
   function toggleMusic(){
+    playSfx('tap');
     const a=getAudio();
     if(playing){
       a.pause();
@@ -576,19 +603,29 @@ function TopControls({onReset}){
       });
     }
   }
+  function toggleSfx(){
+    const next=!sfxState.on;sfxState.on=next;setSfxOn(next);
+    if(next)playSfx('tap');// 开启时给个反馈音
+  }
 
-  return React.createElement('div',{style:{position:'fixed',top:14,right:14,zIndex:9999,display:'flex',gap:8}},
+  const btn=(extra)=>({borderRadius:999,cursor:'pointer',backdropFilter:'blur(6px)',boxShadow:'0 2px 8px rgba(0,0,0,0.3)',...extra});
+  // 单独占一排（非 fixed），内容自然在其下方，不再遮挡标题
+  return React.createElement('div',{style:{display:'flex',gap:8,justifyContent:'flex-end',alignItems:'center',padding:'10px 14px',position:'relative',zIndex:50}},
     onReset&&React.createElement('button',{
-      onClick:onReset,
-      style:{background:'rgba(192,57,43,0.15)',border:'1.5px solid rgba(192,57,43,0.5)',borderRadius:999,color:'#e57373',fontSize:12,fontWeight:700,padding:'6px 13px',cursor:'pointer',backdropFilter:'blur(6px)',boxShadow:'0 2px 8px rgba(0,0,0,0.3)'}
+      onClick:()=>{playSfx('tap');onReset();},
+      style:btn({background:'rgba(192,57,43,0.15)',border:'1.5px solid rgba(192,57,43,0.5)',color:'#e57373',fontSize:12,fontWeight:700,padding:'6px 13px'})
     },'↺ '+T[lang].resetBtn),
     React.createElement('button',{
-      onClick:toggleMusic,
-      style:{background:playing?'rgba(212,175,55,0.35)':'rgba(212,175,55,0.18)',border:`1.5px solid ${playing?'#d4af37':'rgba(212,175,55,0.55)'}`,borderRadius:999,color:'#d4af37',fontSize:16,fontWeight:700,padding:'5px 12px',cursor:'pointer',backdropFilter:'blur(6px)',boxShadow:'0 2px 8px rgba(0,0,0,0.3)'}
+      onClick:toggleSfx,title:'SFX',
+      style:btn({background:sfxOn?'rgba(212,175,55,0.35)':'rgba(212,175,55,0.18)',border:`1.5px solid ${sfxOn?'#d4af37':'rgba(212,175,55,0.55)'}`,color:'#d4af37',fontSize:16,fontWeight:700,padding:'5px 12px'})
+    },sfxOn?'🎵':'🔕'),
+    React.createElement('button',{
+      onClick:toggleMusic,title:'Music',
+      style:btn({background:playing?'rgba(212,175,55,0.35)':'rgba(212,175,55,0.18)',border:`1.5px solid ${playing?'#d4af37':'rgba(212,175,55,0.55)'}`,color:'#d4af37',fontSize:16,fontWeight:700,padding:'5px 12px'})
     },playing?'🔊':'🔇'),
     React.createElement('button',{
-      onClick:toggle,
-      style:{background:'rgba(212,175,55,0.18)',border:'1.5px solid rgba(212,175,55,0.55)',borderRadius:999,color:'#d4af37',fontSize:13,fontWeight:700,padding:'6px 16px',cursor:'pointer',backdropFilter:'blur(6px)',boxShadow:'0 2px 8px rgba(0,0,0,0.3)'}
+      onClick:()=>{playSfx('tap');toggle();},
+      style:btn({background:'rgba(212,175,55,0.18)',border:'1.5px solid rgba(212,175,55,0.55)',color:'#d4af37',fontSize:13,fontWeight:700,padding:'6px 16px'})
     },T[lang].lang)
   );
 }
@@ -613,9 +650,9 @@ function PlanBoard({hand,slots,onChange,currentRn,mode,setMode,onConfirm,confirm
   function removeFromSlot(card,fromKey){onChange({...SS,[fromKey]:SS[fromKey].filter(c=>c.id!==card.id)});}
   function onDS(card,from){setDragSrc({card,from});}function onDE(){setDragSrc(null);setOver(null);}
   function onDrop(to){if(!dragSrc)return;const{card,from}=dragSrc;if(from===to){setDragSrc(null);setOver(null);return;}if(SLOT_KEYS.includes(to))putInSlot(card,from,to);else if(to==='hand'&&from!=='hand')removeFromSlot(card,from);setDragSrc(null);setOver(null);}
-  function clickUnslotted(card){if(sel?.id===card.id){setSel(null);return;}setSel(card);}
-  function clickSlotCard(card,key){if(sel){const fromKey=SLOT_KEYS.find(k=>SS[k].some(c=>c.id===sel.id));const next={...SS};if(fromKey)next[fromKey]=SS[fromKey].filter(c=>c.id!==sel.id);next[key]=SS[key].map(c=>c.id===card.id?sel:c);onChange(next);setSel(null);}else{removeFromSlot(card,key);}}
-  function clickSlotArea(key){if(!sel)return;const max=SLOT_MAX[key];if(!max||SS[key].length>=max)return;const fromKey=SLOT_KEYS.find(k=>SS[k].some(c=>c.id===sel.id));const next={...SS};if(fromKey)next[fromKey]=SS[fromKey].filter(c=>c.id!==sel.id);next[key]=[...SS[key],sel];onChange(next);setSel(null);}
+  function clickUnslotted(card){playSfx('tap');if(sel?.id===card.id){setSel(null);return;}setSel(card);}
+  function clickSlotCard(card,key){playSfx('tap');if(sel){const fromKey=SLOT_KEYS.find(k=>SS[k].some(c=>c.id===sel.id));const next={...SS};if(fromKey)next[fromKey]=SS[fromKey].filter(c=>c.id!==sel.id);next[key]=SS[key].map(c=>c.id===card.id?sel:c);onChange(next);setSel(null);}else{removeFromSlot(card,key);}}
+  function clickSlotArea(key){if(!sel)return;const max=SLOT_MAX[key];if(!max||SS[key].length>=max)return;playSfx('tap');const fromKey=SLOT_KEYS.find(k=>SS[k].some(c=>c.id===sel.id));const next={...SS};if(fromKey)next[fromKey]=SS[fromKey].filter(c=>c.id!==sel.id);next[key]=[...SS[key],sel];onChange(next);setSel(null);}
   function getSlotEval(key){
     const cards=SS[key];const full=cards.length>=SLOT_MAX[key];if(!full)return null;
     if(key==='sk'){const e=evalSK(cards,lang);return{label:e.label,color:e.mult===3?'#f0a500':e.mult===2?'#6fcf73':'#9bb5a8'};}
@@ -658,7 +695,7 @@ function PlanBoard({hand,slots,onChange,currentRn,mode,setMode,onConfirm,confirm
         React.createElement('button',{onClick:()=>setMode(m=>m==='fold'?null:'fold'),style:{flex:1,padding:'9px 0',borderRadius:999,fontWeight:700,fontSize:13,border:mode==='fold'?'2px solid #9bb5a8':'1.5px solid rgba(155,181,168,0.3)',background:mode==='fold'?'rgba(155,181,168,0.15)':'transparent',color:'#9bb5a8',cursor:'pointer'}},t.fold)
       )
     ),
-    React.createElement('div',{style:{padding:'8px 10px 14px',marginTop:'auto'}},React.createElement(Btn,{disabled:confirmDisabled,onClick:onConfirm,style:{width:'100%',padding:'19px 0',fontSize:15}},confirmLabel))
+    React.createElement('div',{style:{padding:'12px 10px 16px'}},React.createElement(Btn,{disabled:confirmDisabled,onClick:onConfirm,style:{width:'100%',padding:'17px 0',fontSize:15}},confirmLabel))
   );
 }
 
