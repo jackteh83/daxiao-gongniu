@@ -548,17 +548,18 @@ function Shell({children}){return React.createElement('div',{className:'bb-bg',s
 
 // ─── 音乐系统 ────────────────────────────────────────────
 const audioRef={current:null};
+const musicState={vol:0.6};// 音乐音量 0~1
 function getAudio(){
   if(!audioRef.current){
     audioRef.current=new Audio('https://jackteh83.github.io/daxiao-gongniu/alex-piano.mp3');
     audioRef.current.loop=true;
-    audioRef.current.volume=0.6;
+    audioRef.current.volume=musicState.vol;
   }
   return audioRef.current;
 }
 
 // ─── 音效系统（Web Audio 合成，无需文件）──────────────────
-const sfxState={on:true};
+const sfxState={on:true,vol:0.6};// vol: 0~1，乘到峰值音量
 let _actx=null;
 function getCtx(){
   if(!_actx){try{_actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){_actx=null;}}
@@ -575,7 +576,7 @@ function playSfx(type='tap'){
     if(type==='click'){o.type='triangle';o.frequency.setValueAtTime(660,now);o.frequency.exponentialRampToValueAtTime(880,now+0.08);}
     else{o.type='sine';o.frequency.setValueAtTime(520,now);o.frequency.exponentialRampToValueAtTime(720,now+0.05);}
     g.gain.setValueAtTime(0.0001,now);
-    g.gain.exponentialRampToValueAtTime(0.18,now+0.01);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002,0.3*sfxState.vol),now+0.01);
     g.gain.exponentialRampToValueAtTime(0.0001,now+0.13);
     o.connect(g);g.connect(ctx.destination);
     o.start(now);o.stop(now+0.14);
@@ -587,46 +588,62 @@ function TopControls({onReset}){
   const lang=useLang();const toggle=useToggleLang();
   const[playing,setPlaying]=useState(true);
   const[sfxOn,setSfxOn]=useState(sfxState.on);
+  const[musicVol,setMusicVol]=useState(Math.round(musicState.vol*100));
+  const[sfxVol,setSfxVol]=useState(Math.round(sfxState.vol*100));
+  const[panel,setPanel]=useState(null);// null | 'music' | 'sfx'
 
   function toggleMusic(){
     playSfx('tap');
     const a=getAudio();
-    if(playing){
-      a.pause();
-      setPlaying(false);
-    } else {
-      a.play().then(()=>{
-        setPlaying(true);
-      }).catch(err=>{
-        a.load();
-        a.play().then(()=>setPlaying(true)).catch(()=>{});
-      });
-    }
+    if(playing){a.pause();setPlaying(false);}
+    else{a.play().then(()=>setPlaying(true)).catch(()=>{a.load();a.play().then(()=>setPlaying(true)).catch(()=>{});});}
   }
   function toggleSfx(){
     const next=!sfxState.on;sfxState.on=next;setSfxOn(next);
-    if(next)playSfx('tap');// 开启时给个反馈音
+    if(next)playSfx('tap');
   }
+  function onMusicVol(v){const n=+v;setMusicVol(n);musicState.vol=n/100;if(audioRef.current)audioRef.current.volume=n/100;}
+  function onSfxVol(v){const n=+v;setSfxVol(n);sfxState.vol=n/100;}
 
   const btn=(extra)=>({borderRadius:999,cursor:'pointer',backdropFilter:'blur(6px)',boxShadow:'0 2px 8px rgba(0,0,0,0.3)',...extra});
-  // 单独占一排（非 fixed），内容自然在其下方，不再遮挡标题
-  return React.createElement('div',{style:{display:'flex',gap:8,justifyContent:'flex-end',alignItems:'center',padding:'10px 14px',position:'relative',zIndex:50}},
-    onReset&&React.createElement('button',{
-      onClick:()=>{playSfx('tap');onReset();},
-      style:btn({background:'rgba(192,57,43,0.15)',border:'1.5px solid rgba(192,57,43,0.5)',color:'#e57373',fontSize:12,fontWeight:700,padding:'6px 13px'})
-    },'↺ '+T[lang].resetBtn),
-    React.createElement('button',{
-      onClick:toggleSfx,title:'SFX',
-      style:btn({background:sfxOn?'rgba(212,175,55,0.35)':'rgba(212,175,55,0.18)',border:`1.5px solid ${sfxOn?'#d4af37':'rgba(212,175,55,0.55)'}`,color:'#d4af37',fontSize:16,fontWeight:700,padding:'5px 12px'})
-    },sfxOn?'🎵':'🔕'),
-    React.createElement('button',{
-      onClick:toggleMusic,title:'Music',
-      style:btn({background:playing?'rgba(212,175,55,0.35)':'rgba(212,175,55,0.18)',border:`1.5px solid ${playing?'#d4af37':'rgba(212,175,55,0.55)'}`,color:'#d4af37',fontSize:16,fontWeight:700,padding:'5px 12px'})
-    },playing?'🔊':'🔇'),
-    React.createElement('button',{
-      onClick:()=>{playSfx('tap');toggle();},
-      style:btn({background:'rgba(212,175,55,0.18)',border:'1.5px solid rgba(212,175,55,0.55)',color:'#d4af37',fontSize:13,fontWeight:700,padding:'6px 16px'})
-    },T[lang].lang)
+  const slider=(value,onInput,onRelease)=>React.createElement('input',{
+    type:'range',min:0,max:100,value,
+    onChange:e=>onInput(e.target.value),
+    onMouseUp:onRelease,onTouchEnd:onRelease,
+    style:{width:'100%',accentColor:'#d4af37',cursor:'pointer'}
+  });
+
+  return React.createElement('div',{style:{position:'relative',zIndex:50}},
+    React.createElement('div',{style:{display:'flex',gap:8,justifyContent:'flex-end',alignItems:'center',padding:'10px 14px'}},
+      onReset&&React.createElement('button',{
+        onClick:()=>{playSfx('tap');onReset();},
+        style:btn({background:'rgba(192,57,43,0.15)',border:'1.5px solid rgba(192,57,43,0.5)',color:'#e57373',fontSize:12,fontWeight:700,padding:'6px 13px'})
+      },'↺ '+T[lang].resetBtn),
+      React.createElement('button',{
+        onClick:()=>{playSfx('tap');setPanel(p=>p==='sfx'?null:'sfx');},title:'SFX',
+        style:btn({background:sfxOn?'rgba(212,175,55,0.35)':'rgba(212,175,55,0.18)',border:`1.5px solid ${panel==='sfx'?'#fff3c4':sfxOn?'#d4af37':'rgba(212,175,55,0.55)'}`,color:'#d4af37',fontSize:16,fontWeight:700,padding:'5px 12px'})
+      },sfxOn?'🎵':'🔕'),
+      React.createElement('button',{
+        onClick:()=>{playSfx('tap');setPanel(p=>p==='music'?null:'music');},title:'Music',
+        style:btn({background:playing?'rgba(212,175,55,0.35)':'rgba(212,175,55,0.18)',border:`1.5px solid ${panel==='music'?'#fff3c4':playing?'#d4af37':'rgba(212,175,55,0.55)'}`,color:'#d4af37',fontSize:16,fontWeight:700,padding:'5px 12px'})
+      },playing?'🔊':'🔇'),
+      React.createElement('button',{
+        onClick:()=>{playSfx('tap');toggle();},
+        style:btn({background:'rgba(212,175,55,0.18)',border:'1.5px solid rgba(212,175,55,0.55)',color:'#d4af37',fontSize:13,fontWeight:700,padding:'6px 16px'})
+      },T[lang].lang)
+    ),
+    // 弹出的音量面板
+    panel&&React.createElement('div',{style:{position:'absolute',top:'100%',right:14,marginTop:2,width:210,background:'rgba(18,28,22,0.97)',border:'1px solid rgba(212,175,55,0.4)',borderRadius:12,padding:'12px 14px',boxShadow:'0 8px 24px rgba(0,0,0,0.5)',backdropFilter:'blur(10px)'}},
+      React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}},
+        React.createElement('span',{style:{color:'#d4af37',fontSize:12,fontWeight:700}},panel==='music'?(lang==='zh'?'🔊 音乐音量':'🔊 Music'):(lang==='zh'?'🎵 音效音量':'🎵 SFX')),
+        React.createElement('span',{style:{color:'#9bb5a8',fontSize:12}},(panel==='music'?musicVol:sfxVol)+'%')
+      ),
+      panel==='music'?slider(musicVol,onMusicVol,null):slider(sfxVol,onSfxVol,()=>playSfx('tap')),
+      React.createElement('button',{
+        onClick:()=>{playSfx('tap');panel==='music'?toggleMusic():toggleSfx();},
+        style:{width:'100%',marginTop:10,padding:'6px 0',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',background:'transparent',border:'1px solid rgba(212,175,55,0.4)',color:'#d4af37'}
+      },panel==='music'?(playing?(lang==='zh'?'暂停音乐':'Pause'):(lang==='zh'?'播放音乐':'Play')):(sfxOn?(lang==='zh'?'关闭音效':'Turn Off'):(lang==='zh'?'开启音效':'Turn On')))
+    )
   );
 }
 
@@ -726,18 +743,18 @@ function HomeScreen({state,onProceed,onRules,onShowFair,onReset,onModeChange}){
     }
   }
   return React.createElement(Shell,null,React.createElement(TopControls,{onReset:inited?onReset:null}),
-    React.createElement('div',{style:{flex:1,padding:'18px 20px 24px',maxWidth:480,margin:'0 auto',width:'100%',boxSizing:'border-box'}},
-      React.createElement('div',{style:{textAlign:'center',marginBottom:16}},
-        React.createElement('div',{style:{fontSize:36}},gmode==='poker'?'🃏':'🐂'),
-        React.createElement('div',{style:{color:'#fffdf7',fontSize:26,fontWeight:700,marginTop:8,fontFamily:'Georgia,serif'}},
+    React.createElement('div',{style:{flex:1,padding:'8px 20px 20px',maxWidth:480,margin:'0 auto',width:'100%',boxSizing:'border-box'}},
+      React.createElement('div',{style:{textAlign:'center',marginBottom:10}},
+        React.createElement('div',{style:{fontSize:30}},gmode==='poker'?'🃏':'🐂'),
+        React.createElement('div',{style:{color:'#fffdf7',fontSize:23,fontWeight:700,marginTop:4,fontFamily:'Georgia,serif'}},
           (()=>{const txt=titleTxt;const idx=txt.indexOf('公')>=0?txt.indexOf('公'):Math.min(2,txt.length-1);
             return Array.from(txt).map((ch,i)=>i===idx
               ?React.createElement(HoldText,{key:i,onHold:onShowFair},ch)
               :React.createElement('span',{key:i},ch));
           })()
         ),
-        React.createElement('div',{style:{color:'#9bb5a8',fontSize:13,marginTop:4}},gmode==='poker'?t.appSubPk:t.appSub),
-        React.createElement('button',{onClick:onRules,style:{marginTop:10,background:'none',border:'1px solid rgba(212,175,55,0.35)',borderRadius:999,color:'#d4af37',fontSize:12,padding:'5px 16px',cursor:'pointer'}},t.rules)
+        React.createElement('div',{style:{color:'#9bb5a8',fontSize:12,marginTop:3}},gmode==='poker'?t.appSubPk:t.appSub),
+        React.createElement('button',{onClick:onRules,style:{marginTop:6,background:'none',border:'1px solid rgba(212,175,55,0.35)',borderRadius:999,color:'#d4af37',fontSize:12,padding:'4px 16px',cursor:'pointer'}},t.rules)
       ),
       React.createElement('div',{style:{color:'#d4af37',fontSize:12,marginBottom:5,letterSpacing:1}},t.modeLabel),
       React.createElement('div',{style:{display:'flex',gap:8,marginBottom:12}},
@@ -746,14 +763,14 @@ function HomeScreen({state,onProceed,onRules,onShowFair,onReset,onModeChange}){
       React.createElement('div',{style:{color:'#d4af37',fontSize:12,marginBottom:5,letterSpacing:1}},t.players),
       React.createElement('div',{style:{display:'flex',gap:8,marginBottom:12}},[2,3,4].map(x=>React.createElement('button',{key:x,onClick:()=>setCount(x),style:{flex:1,padding:'11px 0',borderRadius:10,fontSize:15,fontWeight:700,border:n===x?'2px solid #d4af37':'1px solid rgba(212,175,55,0.25)',background:n===x?'rgba(212,175,55,0.15)':'transparent',color:n===x?'#d4af37':'#9bb5a8',cursor:'pointer'}},x))),
       React.createElement('div',{style:{color:'#d4af37',fontSize:12,marginBottom:5,letterSpacing:1}},t.playerSetup),
-      range(n).map(i=>React.createElement('div',{key:i,style:{marginBottom:7,padding:8,borderRadius:12,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(212,175,55,0.12)'}},
-        React.createElement('div',{style:{display:'flex',gap:7,alignItems:'center',marginBottom:i===0?0:7}},
-          React.createElement('input',{value:names[i]||'',onChange:e=>uN(i,e.target.value),style:{flex:1.4,padding:'10px 12px',borderRadius:8,border:'1px solid rgba(212,175,55,0.25)',background:'rgba(255,255,255,0.05)',color:'#fffdf7',fontSize:14,outline:'none'}}),
+      range(n).map(i=>React.createElement('div',{key:i,style:{marginBottom:5,padding:'6px 8px',borderRadius:10,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(212,175,55,0.12)'}},
+        React.createElement('div',{style:{display:'flex',gap:7,alignItems:'center',marginBottom:i===0?0:5}},
+          React.createElement('input',{value:names[i]||'',onChange:e=>uN(i,e.target.value),style:{flex:1.4,padding:'7px 11px',borderRadius:8,border:'1px solid rgba(212,175,55,0.25)',background:'rgba(255,255,255,0.05)',color:'#fffdf7',fontSize:13,outline:'none'}}),
           inited&&React.createElement('div',{style:{flex:1,textAlign:'right',color:(state.wallet&&state.wallet[i]<0)?'#e57373':'#6fcf73',fontSize:15,fontWeight:700}},`${(state.wallet&&state.wallet[i]!=null?state.wallet[i]:initPts)} ${t.points}`)
         ),
-        i===0?React.createElement('div',{style:{color:'#6fcf73',fontSize:11,marginTop:4}},t.you):React.createElement('div',{style:{display:'flex',gap:7}},
-          React.createElement('button',{onClick:()=>tAI(i),style:{flex:1,padding:'7px 0',borderRadius:7,fontSize:12,fontWeight:600,border:!isAI[i]?'1.5px solid #6fcf73':'1px solid rgba(255,255,255,0.12)',background:!isAI[i]?'rgba(111,207,115,0.15)':'transparent',color:!isAI[i]?'#6fcf73':'#9bb5a8',cursor:'pointer'}},t.human),
-          React.createElement('button',{onClick:()=>tAI(i),style:{flex:1,padding:'7px 0',borderRadius:7,fontSize:12,fontWeight:600,border:isAI[i]?'1.5px solid #d4af37':'1px solid rgba(255,255,255,0.12)',background:isAI[i]?'rgba(212,175,55,0.15)':'transparent',color:isAI[i]?'#d4af37':'#9bb5a8',cursor:'pointer'}},t.ai)
+        i===0?React.createElement('div',{style:{color:'#6fcf73',fontSize:11,marginTop:2}},t.you):React.createElement('div',{style:{display:'flex',gap:7}},
+          React.createElement('button',{onClick:()=>tAI(i),style:{flex:1,padding:'5px 0',borderRadius:7,fontSize:12,fontWeight:600,border:!isAI[i]?'1.5px solid #6fcf73':'1px solid rgba(255,255,255,0.12)',background:!isAI[i]?'rgba(111,207,115,0.15)':'transparent',color:!isAI[i]?'#6fcf73':'#9bb5a8',cursor:'pointer'}},t.human),
+          React.createElement('button',{onClick:()=>tAI(i),style:{flex:1,padding:'5px 0',borderRadius:7,fontSize:12,fontWeight:600,border:isAI[i]?'1.5px solid #d4af37':'1px solid rgba(255,255,255,0.12)',background:isAI[i]?'rgba(212,175,55,0.15)':'transparent',color:isAI[i]?'#d4af37':'#9bb5a8',cursor:'pointer'}},t.ai)
         )
       )),
       !inited&&React.createElement('div',{style:{marginTop:12,padding:'10px 14px',borderRadius:12,background:'rgba(212,175,55,0.07)',border:'1px solid rgba(212,175,55,0.25)'}},
@@ -1009,9 +1026,9 @@ function ResultScreen({res,players,rn,dealerIdx,onNext,isLast}){
           );
         })
       ),
-      React.createElement('div',{style:{marginTop:18,marginBottom:16}},
-        React.createElement('div',{style:{color:'#d4af37',fontSize:11,letterSpacing:1,marginBottom:8}},t.currentScore),
-        players.map(p=>React.createElement('div',{key:p.id,style:{display:'flex',justifyContent:'space-between',padding:'7px 12px',background:'rgba(255,255,255,0.04)',borderRadius:8,marginBottom:5}},
+      React.createElement('div',{style:{marginTop:10,marginBottom:10}},
+        React.createElement('div',{style:{color:'#d4af37',fontSize:11,letterSpacing:1,marginBottom:6}},t.currentScore),
+        players.map(p=>React.createElement('div',{key:p.id,style:{display:'flex',justifyContent:'space-between',padding:'5px 12px',background:'rgba(255,255,255,0.04)',borderRadius:8,marginBottom:3}},
           React.createElement('span',{style:{color:'#fffdf7',fontSize:13}},p.name),
           React.createElement('span',{style:{color:p.score>=0?'#6fcf73':'#e57373',fontWeight:700,fontSize:13}},`${p.score>=0?'+':''}${p.score}`)
         ))
